@@ -1,6 +1,7 @@
 # Phase 10: Documentation, Deployment & Production Readiness
 
 ## Objectives
+
 - Complete OpenAPI documentation
 - Create deployment scripts and infrastructure
 - Add monitoring and observability
@@ -21,21 +22,21 @@ info:
   version: 1.0.0
   description: |
     Unified notification delivery service supporting email, SMS, push notifications, and in-app messaging.
-    
+
     ## Features
     - Multi-channel delivery (email, SMS, push, in-app)
     - Bulk notifications with datasource integration
     - Real-time notifications via Server-Sent Events (SSE)
     - Template management
     - Delivery tracking and analytics
-    
+
     ## Authentication
     All API endpoints require authentication using API keys passed via Bearer token.
-    
+
   contact:
     name: API Support
     email: support@yourdomain.com
-  
+
 servers:
   - url: https://buzz.yourdomain.com/api/v1
     description: Production
@@ -68,7 +69,7 @@ paths:
       tags: [Monitoring]
       security: []
       responses:
-        '200':
+        "200":
           description: Service is healthy
           content:
             application/json:
@@ -97,7 +98,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SendNotificationRequest'
+              $ref: "#/components/schemas/SendNotificationRequest"
             examples:
               email:
                 summary: Email notification
@@ -117,33 +118,33 @@ paths:
                   body: "Your OTP code is 123456"
                   priority: "high"
       responses:
-        '202':
+        "202":
           description: Notification queued successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/NotificationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
     get:
       summary: List notifications
       tags: [Notifications]
       parameters:
-        - $ref: '#/components/parameters/Status'
-        - $ref: '#/components/parameters/Channel'
-        - $ref: '#/components/parameters/RecipientID'
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Offset'
+        - $ref: "#/components/parameters/Status"
+        - $ref: "#/components/parameters/Channel"
+        - $ref: "#/components/parameters/RecipientID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
       responses:
-        '200':
+        "200":
           description: List of notifications
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationList'
+                $ref: "#/components/schemas/NotificationList"
 
   /notifications/{id}:
     get:
@@ -157,12 +158,12 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Notification details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Notification'
+                $ref: "#/components/schemas/Notification"
 
   /notifications/bulk:
     post:
@@ -173,9 +174,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BulkSendRequest'
+              $ref: "#/components/schemas/BulkSendRequest"
       responses:
-        '202':
+        "202":
           description: Batch queued for processing
           content:
             application/json:
@@ -198,10 +199,10 @@ paths:
           schema:
             type: string
             enum: [fetching, queued, delivering, completed, failed]
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Offset'
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
       responses:
-        '200':
+        "200":
           description: List of batches
           content:
             application/json:
@@ -211,7 +212,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Batch'
+                      $ref: "#/components/schemas/Batch"
 
   /notifications/bulk/{id}:
     get:
@@ -225,12 +226,12 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Batch details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Batch'
+                $ref: "#/components/schemas/Batch"
 
   /templates:
     get:
@@ -248,7 +249,7 @@ paths:
             type: boolean
             default: true
       responses:
-        '200':
+        "200":
           description: List of templates
 
     post:
@@ -259,9 +260,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTemplateRequest'
+              $ref: "#/components/schemas/CreateTemplateRequest"
       responses:
-        '201':
+        "201":
           description: Template created
 
   /datasources:
@@ -269,7 +270,7 @@ paths:
       summary: List registered datasources
       tags: [Datasources]
       responses:
-        '200':
+        "200":
           description: List of datasources
 
     post:
@@ -280,9 +281,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDatasourceRequest'
+              $ref: "#/components/schemas/CreateDatasourceRequest"
       responses:
-        '201':
+        "201":
           description: Datasource registered
 
   /stream:
@@ -299,7 +300,7 @@ paths:
             type: string
           description: User JWT token
       responses:
-        '200':
+        "200":
           description: SSE stream
           content:
             text/event-stream:
@@ -319,7 +320,7 @@ paths:
             type: boolean
             default: false
       responses:
-        '200':
+        "200":
           description: Inbox entries
 
   /inbox/{id}/read:
@@ -336,7 +337,7 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Marked as read
 
   /devices/register:
@@ -360,7 +361,7 @@ paths:
                   type: string
                   enum: [android, ios, web]
       responses:
-        '201':
+        "201":
           description: Device registered
 
 components:
@@ -369,7 +370,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: API Key
-    
+
     UserTokenAuth:
       type: http
       scheme: bearer
@@ -382,20 +383,20 @@ components:
       schema:
         type: string
         enum: [queued, sent, failed, skipped]
-    
+
     Channel:
       name: channel
       in: query
       schema:
         type: string
         enum: [email, sms, push, in_app]
-    
+
     RecipientID:
       name: recipient_id
       in: query
       schema:
         type: string
-    
+
     Limit:
       name: limit
       in: query
@@ -404,7 +405,7 @@ components:
         default: 20
         minimum: 1
         maximum: 100
-    
+
     Offset:
       name: offset
       in: query
@@ -478,7 +479,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Notification'
+            $ref: "#/components/schemas/Notification"
         total:
           type: integer
         limit:
@@ -571,7 +572,7 @@ components:
             properties:
               error:
                 type: string
-    
+
     Unauthorized:
       description: Unauthorized
       content:
@@ -581,7 +582,7 @@ components:
             properties:
               error:
                 type: string
-    
+
     NotFound:
       description: Resource not found
       content:
@@ -615,52 +616,52 @@ spec:
         app: buzz-service
     spec:
       containers:
-      - name: buzz-service
-        image: yourdomain.com/buzz-service:1.0.0
-        ports:
-        - containerPort: 8080
-        env:
-        - name: DB_HOST
-          valueFrom:
-            secretKeyRef:
-              name: buzz-secrets
-              key: db-host
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: buzz-secrets
-              key: db-password
-        - name: REDIS_HOST
-          value: redis-service
-        - name: FCM_CREDENTIALS_FILE
-          value: /secrets/firebase-admin.json
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        volumeMounts:
-        - name: firebase-secret
-          mountPath: /secrets
-          readOnly: true
+        - name: buzz-service
+          image: yourdomain.com/buzz-service:1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: buzz-secrets
+                  key: db-host
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: buzz-secrets
+                  key: db-password
+            - name: REDIS_HOST
+              value: redis-service
+            - name: FCM_CREDENTIALS_FILE
+              value: /secrets/firebase-admin.json
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: firebase-secret
+              mountPath: /secrets
+              readOnly: true
       volumes:
-      - name: firebase-secret
-        secret:
-          secretName: firebase-credentials
+        - name: firebase-secret
+          secret:
+            secretName: firebase-credentials
 
 ---
 apiVersion: v1
@@ -672,8 +673,8 @@ spec:
   selector:
     app: buzz-service
   ports:
-  - port: 80
-    targetPort: 8080
+    - port: 80
+      targetPort: 8080
   type: LoadBalancer
 
 ---
@@ -690,18 +691,18 @@ spec:
   minReplicas: 3
   maxReplicas: 10
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
 ```
 
 ---
@@ -842,7 +843,7 @@ app.Use(cors.New(cors.Config{
 
 ### README.md
 
-```markdown
+````markdown
 # Buzz Notification Service
 
 Unified multi-channel notification delivery service supporting email, SMS, push, and in-app notifications.
@@ -884,6 +885,7 @@ make migrate-up
 # Start service
 make run
 ```
+````
 
 ### Configuration
 
@@ -913,6 +915,7 @@ FCM_CREDENTIALS_FILE=./firebase-admin.json
 ## API Documentation
 
 Interactive API documentation available at:
+
 - Swagger UI: `http://localhost:8080/docs`
 - OpenAPI Spec: `./docs/openapi.yaml`
 
@@ -953,9 +956,11 @@ make load-test
 ## Support
 
 For issues and questions:
+
 - GitHub Issues: https://github.com/yourdomain/buzz-service/issues
 - Email: support@yourdomain.com
-```
+
+````
 
 ---
 
@@ -975,7 +980,7 @@ class BuzzClient:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-    
+
     def send_notification(
         self,
         to: str,
@@ -992,7 +997,7 @@ class BuzzClient:
             "channel": channel,
             "priority": priority
         }
-        
+
         if template:
             payload["template"] = template
             payload["data"] = data or {}
@@ -1000,7 +1005,7 @@ class BuzzClient:
             if subject:
                 payload["subject"] = subject
             payload["body"] = body
-        
+
         response = requests.post(
             f"{self.base_url}/api/v1/notifications",
             headers=self.headers,
@@ -1008,7 +1013,7 @@ class BuzzClient:
         )
         response.raise_for_status()
         return response.json()
-    
+
     def send_bulk(
         self,
         datasource: str,
@@ -1027,7 +1032,7 @@ class BuzzClient:
             "template": template,
             "data": data
         }
-        
+
         response = requests.post(
             f"{self.base_url}/api/v1/notifications/bulk",
             headers=self.headers,
@@ -1053,7 +1058,7 @@ client.send_notification(
 
 # Send bulk SMS
 result = client.send_bulk(
-    datasource="ediflix-lms",
+    datasource="elight-lms",
     endpoint="group_members",
     params={"group_id": "cs101-students"},
     channel="sms",
@@ -1061,7 +1066,7 @@ result = client.send_bulk(
     data={"assignment": "Math HW", "due_date": "Tomorrow"}
 )
 print(f"Batch ID: {result['batch_id']}")
-```
+````
 
 ---
 
@@ -1098,7 +1103,7 @@ export default function() {
   };
 
   let res = http.post('http://localhost:8080/api/v1/notifications', payload, params);
-  
+
   check(res, {
     'status is 202': (r) => r.status === 202,
     'response time < 200ms': (r) => r.timings.duration < 200,
@@ -1107,6 +1112,7 @@ export default function() {
 ```
 
 **Expected Performance:**
+
 - Single notifications: 1000+ req/sec
 - Worker throughput: 10,000+ notifications/min per worker
 - SSE connections: 100,000+ concurrent connections
@@ -1152,18 +1158,21 @@ export default function() {
 ## Post-Launch
 
 ### Week 1
+
 - Monitor error rates and latencies
 - Review delivery success rates per channel
 - Adjust worker concurrency if needed
 - Verify SSE connection stability
 
 ### Week 2
+
 - Analyze notification patterns
 - Optimize template rendering
 - Review and adjust rate limits
 - Fine-tune autoscaling parameters
 
 ### Month 1
+
 - Cost analysis per channel
 - User feedback collection
 - Feature prioritization for v1.1
@@ -1174,6 +1183,7 @@ export default function() {
 ## Support & Maintenance
 
 ### Regular Tasks
+
 - Weekly: Review error logs and failed notifications
 - Monthly: Database cleanup (archive old notifications)
 - Quarterly: Security updates and dependency upgrades
@@ -1182,6 +1192,7 @@ export default function() {
 ### Troubleshooting
 
 **High queue backlog:**
+
 ```bash
 # Check queue sizes
 redis-cli LLEN buzz:queue:email
@@ -1191,6 +1202,7 @@ kubectl scale deployment buzz-service --replicas=10
 ```
 
 **Failed email deliveries:**
+
 ```bash
 # Check SES sending limits
 aws ses get-send-quota
@@ -1200,6 +1212,7 @@ aws ses get-send-statistics
 ```
 
 **SSE connection drops:**
+
 ```bash
 # Check nginx timeout settings
 # Verify Redis Pub/Sub subscriptions

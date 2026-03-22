@@ -54,7 +54,7 @@ Output will be in `docs/site/dist/`
 ```
 
 The documentation will be available at:
-`https://ediflix.github.io/buzz-service/`
+`https://elight.github.io/buzz-service/`
 
 ### Custom Server
 
@@ -99,6 +99,7 @@ rsync -avz docs/site/dist/ user@server:/var/www/buzz-docs/
 ## Dependencies
 
 **External CDNs:**
+
 - Font Awesome 6.4.0 (icons)
 
 **No build tools required** - Pure HTML, CSS, and vanilla JavaScript

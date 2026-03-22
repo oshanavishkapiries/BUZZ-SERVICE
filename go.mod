@@ -1,4 +1,4 @@
-module github.com/ediflix/buzz-service
+module github.com/elight/buzz-service
 
 go 1.26.1
 

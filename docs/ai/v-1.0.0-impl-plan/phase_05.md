@@ -1,6 +1,7 @@
 # Phase 05: Email Provider Implementation
 
 ## Objectives
+
 - Implement Amazon SES provider
 - Add SMTP fallback provider
 - Support HTML email templates
@@ -316,20 +317,20 @@ func (p *SMTPProvider) SendEmail(ctx context.Context, msg *EmailMessage) error {
     if msg.HTMLBody != "" {
         boundary := "boundary_buzz_service"
         headers["Content-Type"] = fmt.Sprintf("multipart/alternative; boundary=\"%s\"", boundary)
-        
+
         message.WriteString("\r\n")
         message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
         message.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
         message.WriteString("\r\n")
         message.WriteString(msg.TextBody)
         message.WriteString("\r\n\r\n")
-        
+
         message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
         message.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
         message.WriteString("\r\n")
         message.WriteString(msg.HTMLBody)
         message.WriteString("\r\n\r\n")
-        
+
         message.WriteString(fmt.Sprintf("--%s--", boundary))
     } else {
         headers["Content-Type"] = "text/plain; charset=UTF-8"
@@ -347,7 +348,7 @@ func (p *SMTPProvider) SendEmail(ctx context.Context, msg *EmailMessage) error {
 
     // Send email
     addr := fmt.Sprintf("%s:%d", p.host, p.port)
-    
+
     if p.useTLS {
         // TLS connection
         tlsConfig := &tls.Config{
@@ -569,14 +570,14 @@ func (h *WebhookHandler) HandleSESWebhook(c *fiber.Ctx) error {
 
     if messageType == "Notification" {
         message := payload["Message"].(string)
-        
+
         var sesMessage map[string]interface{}
         if err := json.Unmarshal([]byte(message), &sesMessage); err != nil {
             return c.Status(400).JSON(fiber.Map{"error": "invalid SES message"})
         }
 
         notificationType := sesMessage["notificationType"].(string)
-        
+
         switch notificationType {
         case "Bounce":
             return h.handleBounce(c, sesMessage)
@@ -591,12 +592,12 @@ func (h *WebhookHandler) HandleSESWebhook(c *fiber.Ctx) error {
 func (h *WebhookHandler) handleBounce(c *fiber.Ctx, message map[string]interface{}) error {
     bounce := message["bounce"].(map[string]interface{})
     bounceType := bounce["bounceType"].(string)
-    
+
     recipients := bounce["bouncedRecipients"].([]interface{})
-    
+
     for _, recipient := range recipients {
         email := recipient.(map[string]interface{})["emailAddress"].(string)
-        
+
         // Mark email as bounced in database
         // Optionally: disable future sends to this address
         _ = email
@@ -609,10 +610,10 @@ func (h *WebhookHandler) handleBounce(c *fiber.Ctx, message map[string]interface
 func (h *WebhookHandler) handleComplaint(c *fiber.Ctx, message map[string]interface{}) error {
     complaint := message["complaint"].(map[string]interface{})
     recipients := complaint["complainedRecipients"].([]interface{})
-    
+
     for _, recipient := range recipients {
         email := recipient.(map[string]interface{})["emailAddress"].(string)
-        
+
         // Mark email as complained (spam report)
         // MUST stop sending to this address
         _ = email
@@ -645,7 +646,7 @@ SMTP_PASSWORD=your_app_password
 SMTP_USE_TLS=true
 
 # Branding
-INSTITUTION_NAME=Ediflix Learning Platform
+INSTITUTION_NAME=elight Learning Platform
 ```
 
 ---
@@ -720,7 +721,7 @@ func (p *RateLimitedEmailProvider) SendEmail(ctx context.Context, msg *EmailMess
     if err := p.limiter.Wait(ctx); err != nil {
         return err
     }
-    
+
     return p.provider.SendEmail(ctx, msg)
 }
 ```
@@ -767,4 +768,5 @@ curl -X POST http://localhost:8080/api/v1/notifications \
 ---
 
 ## Next Phase
+
 **Phase 06**: SMS provider implementation (NotifyLK for Sri Lanka + Twilio fallback)

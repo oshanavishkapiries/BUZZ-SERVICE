@@ -46,8 +46,8 @@ POST /api/v1/datasources
 Authorization: Bearer <api-key>
 
 {
-  "name": "ediflix-lms",
-  "base_url": "https://api.ediflix.com",
+  "name": "elight-lms",
+  "base_url": "https://api.elight.com",
   "auth": {
     "type": "bearer",
     "token": "secret-service-token"
@@ -107,7 +107,7 @@ POST /api/v1/notifications/bulk
 Authorization: Bearer <api-key>
 
 {
-  "datasource": "ediflix-lms",
+  "datasource": "elight-lms",
   "endpoint": "group_members",
   "params": {
     "group_id": "cs101-students"

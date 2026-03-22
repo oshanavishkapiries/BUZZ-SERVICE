@@ -2,7 +2,7 @@
 
 ## The Problem
 
-Buzz currently pushes notifications *outward* (email, SMS, FCM). But frontends also want **in-app real-time notifications** — the bell icon with a badge, toast popups, live updates without refreshing.
+Buzz currently pushes notifications _outward_ (email, SMS, FCM). But frontends also want **in-app real-time notifications** — the bell icon with a badge, toast popups, live updates without refreshing.
 
 ```
 Currently:
@@ -56,14 +56,14 @@ What you want:
 
 ## WebSocket vs SSE — Which One?
 
-| | WebSocket | SSE (Server-Sent Events) |
-|---|-----------|--------------------------|
-| **Direction** | Bidirectional | Server → Client only |
-| **Complexity** | Higher (connection management, heartbeats) | Lower (just HTTP streaming) |
-| **Browser support** | All modern browsers | All modern browsers |
-| **Mobile** | Needs a WS library | HTTP-based, simpler |
-| **Reconnection** | You build it | Built-in auto-reconnect |
-| **Load balancers** | Needs sticky sessions or upgrade support | Works with standard HTTP |
+|                     | WebSocket                                  | SSE (Server-Sent Events)    |
+| ------------------- | ------------------------------------------ | --------------------------- |
+| **Direction**       | Bidirectional                              | Server → Client only        |
+| **Complexity**      | Higher (connection management, heartbeats) | Lower (just HTTP streaming) |
+| **Browser support** | All modern browsers                        | All modern browsers         |
+| **Mobile**          | Needs a WS library                         | HTTP-based, simpler         |
+| **Reconnection**    | You build it                               | Built-in auto-reconnect     |
+| **Load balancers**  | Needs sticky sessions or upgrade support   | Works with standard HTTP    |
 
 **Recommendation: SSE for v1.0.0.** Notifications are server→client only — you don't need the client to send data back through the connection. SSE is simpler, auto-reconnects, and works through standard HTTP infrastructure. Switch to WebSocket later only if you need bidirectional features (read receipts, typing indicators, etc.).
 
@@ -76,7 +76,7 @@ What you want:
 ```javascript
 // Frontend — dead simple
 const eventSource = new EventSource(
-  'https://buzz.ediflix.com/api/v1/stream?token=user-jwt-token'
+  "https://buzz.elight.com/api/v1/stream?token=user-jwt-token",
 );
 
 eventSource.onmessage = (event) => {
@@ -85,7 +85,7 @@ eventSource.onmessage = (event) => {
   incrementBadgeCount();
 };
 
-eventSource.addEventListener('notification', (event) => {
+eventSource.addEventListener("notification", (event) => {
   const data = JSON.parse(event.data);
   // { id, title, body, channel, created_at, read: false }
 });
@@ -256,6 +256,7 @@ internal/
 2. **Missed notifications** — Client was offline when notification was sent? On reconnect, client calls `GET /inbox?unread=true` to catch up. SSE also supports `Last-Event-ID` header for automatic catch-up.
 
 3. **Authentication** — SSE doesn't support custom headers in the browser `EventSource` API. Pass the JWT as a query parameter (`?token=...`) or use a short-lived ticket:
+
    ```
    POST /api/v1/stream/ticket → { "ticket": "one-time-token" }
    GET /api/v1/stream?ticket=one-time-token

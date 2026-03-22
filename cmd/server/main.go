@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ediflix/buzz-service/internal/api"
-	"github.com/ediflix/buzz-service/internal/config"
-	"github.com/ediflix/buzz-service/internal/store"
-	"github.com/ediflix/buzz-service/pkg/logger"
+	"github.com/elight/buzz-service/internal/api"
+	"github.com/elight/buzz-service/internal/config"
+	"github.com/elight/buzz-service/internal/store"
+	"github.com/elight/buzz-service/pkg/logger"
 	"github.com/gofiber/fiber/v2"
 )
 

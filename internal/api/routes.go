@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/ediflix/buzz-service/internal/store"
+	"github.com/elight/buzz-service/internal/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"

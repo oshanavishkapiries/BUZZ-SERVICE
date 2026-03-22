@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/ediflix/buzz-service/internal/domain"
+	"github.com/elight/buzz-service/internal/domain"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )

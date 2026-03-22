@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ediflix/buzz-service/internal/domain"
+	"github.com/elight/buzz-service/internal/domain"
 	"github.com/google/uuid"
 )
 

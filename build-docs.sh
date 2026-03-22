@@ -87,7 +87,7 @@ deploy_site() {
     rm -rf /tmp/buzz-docs
     
     echo -e "${GREEN}Deployment complete!${NC}"
-    echo "Documentation will be available at: https://ediflix.github.io/buzz-service/"
+    echo "Documentation will be available at: https://elight.github.io/buzz-service/"
 }
 
 # Main script logic

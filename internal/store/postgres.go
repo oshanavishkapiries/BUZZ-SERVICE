@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ediflix/buzz-service/internal/config"
+	"github.com/elight/buzz-service/internal/config"
 	_ "github.com/lib/pq"
 )
 

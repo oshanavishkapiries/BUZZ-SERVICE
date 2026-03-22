@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ediflix/buzz-service/internal/config"
+	"github.com/elight/buzz-service/internal/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

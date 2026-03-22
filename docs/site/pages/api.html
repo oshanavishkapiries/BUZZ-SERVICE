@@ -1,92 +1,110 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>API Reference - Buzz Notification Service</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
+    <link rel="stylesheet" href="../assets/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
     <nav class="navbar">
-        <div class="container">
-            <div class="nav-brand">
-                <i class="fas fa-bell"></i>
-                <span>Buzz</span>
-            </div>
-            <ul class="nav-menu">
-                <li><a href="../index.html">Home</a></li>
-                <li><a href="architecture.html">Architecture</a></li>
-                <li><a href="api.html" class="active">API Reference</a></li>
-                <li><a href="guides.html">Guides</a></li>
-                <li><a href="deployment.html">Deployment</a></li>
-                <li><a href="https://github.com/ediflix/buzz-service" target="_blank"><i class="fab fa-github"></i></a></li>
-            </ul>
-            <div class="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
+      <div class="container">
+        <div class="nav-brand">
+          <i class="fas fa-bell"></i>
+          <span>Buzz</span>
         </div>
+        <ul class="nav-menu">
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="architecture.html">Architecture</a></li>
+          <li><a href="api.html" class="active">API Reference</a></li>
+          <li><a href="guides.html">Guides</a></li>
+          <li><a href="deployment.html">Deployment</a></li>
+          <li>
+            <a href="https://github.com/elight/buzz-service" target="_blank"
+              ><i class="fab fa-github"></i
+            ></a>
+          </li>
+        </ul>
+        <div class="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
     </nav>
 
     <div class="doc-container">
-        <aside class="sidebar">
-            <h3>On This Page</h3>
-            <ul>
-                <li><a href="#authentication">Authentication</a></li>
-                <li><a href="#notifications">Notifications</a></li>
-                <li><a href="#batches">Batches</a></li>
-                <li><a href="#templates">Templates</a></li>
-                <li><a href="#inbox">Inbox</a></li>
-                <li><a href="#datasources">Datasources</a></li>
-                <li><a href="#errors">Error Handling</a></li>
-            </ul>
-        </aside>
+      <aside class="sidebar">
+        <h3>On This Page</h3>
+        <ul>
+          <li><a href="#authentication">Authentication</a></li>
+          <li><a href="#notifications">Notifications</a></li>
+          <li><a href="#batches">Batches</a></li>
+          <li><a href="#templates">Templates</a></li>
+          <li><a href="#inbox">Inbox</a></li>
+          <li><a href="#datasources">Datasources</a></li>
+          <li><a href="#errors">Error Handling</a></li>
+        </ul>
+      </aside>
 
-        <main class="doc-content">
-            <h1>API Reference</h1>
-            <p>Complete API reference for Buzz Notification Service.</p>
+      <main class="doc-content">
+        <h1>API Reference</h1>
+        <p>Complete API reference for Buzz Notification Service.</p>
 
-            <div class="info-box">
-                <strong><i class="fas fa-info-circle"></i> Base URL</strong>
-                <p>All API endpoints are relative to: <code>https://your-domain.com/api/v1</code></p>
-            </div>
+        <div class="info-box">
+          <strong><i class="fas fa-info-circle"></i> Base URL</strong>
+          <p>
+            All API endpoints are relative to:
+            <code>https://your-domain.com/api/v1</code>
+          </p>
+        </div>
 
-            <h2 id="authentication">Authentication</h2>
-            <p>All API requests require authentication using an API key.</p>
+        <h2 id="authentication">Authentication</h2>
+        <p>All API requests require authentication using an API key.</p>
 
-            <h3>API Key Authentication</h3>
-            <p>Include your API key in the <code>Authorization</code> header:</p>
-            <div class="code-block">
-                <pre><code>Authorization: Bearer YOUR_API_KEY</code></pre>
-            </div>
+        <h3>API Key Authentication</h3>
+        <p>Include your API key in the <code>Authorization</code> header:</p>
+        <div class="code-block">
+          <pre><code>Authorization: Bearer YOUR_API_KEY</code></pre>
+        </div>
 
-            <div class="warning-box">
-                <strong><i class="fas fa-exclamation-triangle"></i> Keep Your API Keys Secret</strong>
-                <p>Never expose API keys in client-side code or public repositories.</p>
-            </div>
+        <div class="warning-box">
+          <strong
+            ><i class="fas fa-exclamation-triangle"></i> Keep Your API Keys
+            Secret</strong
+          >
+          <p>
+            Never expose API keys in client-side code or public repositories.
+          </p>
+        </div>
 
-            <h3>Rate Limiting</h3>
-            <p>API keys have configurable rate limits. Rate limit headers are included in all responses:</p>
-            <div class="code-block">
-                <pre><code>X-RateLimit-Limit: 1000
+        <h3>Rate Limiting</h3>
+        <p>
+          API keys have configurable rate limits. Rate limit headers are
+          included in all responses:
+        </p>
+        <div class="code-block">
+          <pre><code>X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 999
 X-RateLimit-Reset: 1640995200</code></pre>
-            </div>
+        </div>
 
-            <h2 id="notifications">Notifications</h2>
+        <h2 id="notifications">Notifications</h2>
 
-            <h3>Send Single Notification</h3>
-            <p>Send a notification via a specific channel.</p>
-            
-            <div class="code-block">
-                <pre><code>POST /api/v1/notifications</code></pre>
-            </div>
+        <h3>Send Single Notification</h3>
+        <p>Send a notification via a specific channel.</p>
 
-            <p><strong>Request Body:</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <div class="code-block">
+          <pre><code>POST /api/v1/notifications</code></pre>
+        </div>
+
+        <p><strong>Request Body:</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "channel": "email",
   "priority": "normal",
   "recipient": {
@@ -101,22 +119,34 @@ X-RateLimit-Reset: 1640995200</code></pre>
     "campaign": "onboarding"
   }
 }</code></pre>
-            </div>
+        </div>
 
-            <p><strong>Parameters:</strong></p>
-            <ul>
-                <li><code>channel</code> (required): <code>email</code>, <code>sms</code>, <code>push</code>, or <code>in_app</code></li>
-                <li><code>priority</code> (optional): <code>low</code>, <code>normal</code>, <code>high</code>, <code>urgent</code> (default: <code>normal</code>)</li>
-                <li><code>recipient</code> (required): Object with channel-specific fields</li>
-                <li><code>subject</code> (optional): For email and push notifications</li>
-                <li><code>body</code> (required): Notification body text</li>
-                <li><code>html_body</code> (optional): HTML version for email</li>
-                <li><code>metadata</code> (optional): Custom metadata object</li>
-            </ul>
+        <p><strong>Parameters:</strong></p>
+        <ul>
+          <li>
+            <code>channel</code> (required): <code>email</code>,
+            <code>sms</code>, <code>push</code>, or <code>in_app</code>
+          </li>
+          <li>
+            <code>priority</code> (optional): <code>low</code>,
+            <code>normal</code>, <code>high</code>,
+            <code>urgent</code> (default: <code>normal</code>)
+          </li>
+          <li>
+            <code>recipient</code> (required): Object with channel-specific
+            fields
+          </li>
+          <li>
+            <code>subject</code> (optional): For email and push notifications
+          </li>
+          <li><code>body</code> (required): Notification body text</li>
+          <li><code>html_body</code> (optional): HTML version for email</li>
+          <li><code>metadata</code> (optional): Custom metadata object</li>
+        </ul>
 
-            <p><strong>Response (201 Created):</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <p><strong>Response (201 Created):</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "channel": "email",
   "priority": "normal",
@@ -128,18 +158,18 @@ X-RateLimit-Reset: 1640995200</code></pre>
   "created_at": "2026-03-23T10:30:00Z",
   "queued_at": "2026-03-23T10:30:01Z"
 }</code></pre>
-            </div>
+        </div>
 
-            <h3>Send with Template</h3>
-            <p>Send a notification using a predefined template.</p>
-            
-            <div class="code-block">
-                <pre><code>POST /api/v1/notifications</code></pre>
-            </div>
+        <h3>Send with Template</h3>
+        <p>Send a notification using a predefined template.</p>
 
-            <p><strong>Request Body:</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <div class="code-block">
+          <pre><code>POST /api/v1/notifications</code></pre>
+        </div>
+
+        <p><strong>Request Body:</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "channel": "email",
   "recipient": {
     "email": "user@example.com"
@@ -151,16 +181,16 @@ X-RateLimit-Reset: 1640995200</code></pre>
     "app_name": "MyApp"
   }
 }</code></pre>
-            </div>
+        </div>
 
-            <h3>Get Notification Status</h3>
-            <div class="code-block">
-                <pre><code>GET /api/v1/notifications/{id}</code></pre>
-            </div>
+        <h3>Get Notification Status</h3>
+        <div class="code-block">
+          <pre><code>GET /api/v1/notifications/{id}</code></pre>
+        </div>
 
-            <p><strong>Response (200 OK):</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <p><strong>Response (200 OK):</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "channel": "email",
   "priority": "normal",
@@ -177,33 +207,33 @@ X-RateLimit-Reset: 1640995200</code></pre>
   "sent_at": "2026-03-23T10:30:02Z",
   "delivered_at": "2026-03-23T10:30:05Z"
 }</code></pre>
-            </div>
+        </div>
 
-            <h3>List Notifications</h3>
-            <div class="code-block">
-                <pre><code>GET /api/v1/notifications?status=sent&channel=email&limit=50&offset=0</code></pre>
-            </div>
+        <h3>List Notifications</h3>
+        <div class="code-block">
+          <pre><code>GET /api/v1/notifications?status=sent&channel=email&limit=50&offset=0</code></pre>
+        </div>
 
-            <p><strong>Query Parameters:</strong></p>
-            <ul>
-                <li><code>status</code>: Filter by status</li>
-                <li><code>channel</code>: Filter by channel</li>
-                <li><code>limit</code>: Results per page (default: 50, max: 100)</li>
-                <li><code>offset</code>: Pagination offset</li>
-            </ul>
+        <p><strong>Query Parameters:</strong></p>
+        <ul>
+          <li><code>status</code>: Filter by status</li>
+          <li><code>channel</code>: Filter by channel</li>
+          <li><code>limit</code>: Results per page (default: 50, max: 100)</li>
+          <li><code>offset</code>: Pagination offset</li>
+        </ul>
 
-            <h2 id="batches">Batches</h2>
+        <h2 id="batches">Batches</h2>
 
-            <h3>Create Batch</h3>
-            <p>Create a bulk notification batch.</p>
-            
-            <div class="code-block">
-                <pre><code>POST /api/v1/batches</code></pre>
-            </div>
+        <h3>Create Batch</h3>
+        <p>Create a bulk notification batch.</p>
 
-            <p><strong>Request Body:</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <div class="code-block">
+          <pre><code>POST /api/v1/batches</code></pre>
+        </div>
+
+        <p><strong>Request Body:</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "name": "Weekly Newsletter",
   "description": "Send weekly newsletter to subscribers",
   "channel": "email",
@@ -215,11 +245,11 @@ X-RateLimit-Reset: 1640995200</code></pre>
     "retry_failed": true
   }
 }</code></pre>
-            </div>
+        </div>
 
-            <p><strong>Response (201 Created):</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <p><strong>Response (201 Created):</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "id": "550e8400-e29b-41d4-a716-446655440003",
   "name": "Weekly Newsletter",
   "status": "pending",
@@ -231,16 +261,16 @@ X-RateLimit-Reset: 1640995200</code></pre>
   "scheduled_at": "2026-03-24T09:00:00Z",
   "created_at": "2026-03-23T10:30:00Z"
 }</code></pre>
-            </div>
+        </div>
 
-            <h3>Get Batch Status</h3>
-            <div class="code-block">
-                <pre><code>GET /api/v1/batches/{id}</code></pre>
-            </div>
+        <h3>Get Batch Status</h3>
+        <div class="code-block">
+          <pre><code>GET /api/v1/batches/{id}</code></pre>
+        </div>
 
-            <p><strong>Response (200 OK):</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <p><strong>Response (200 OK):</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "id": "550e8400-e29b-41d4-a716-446655440003",
   "name": "Weekly Newsletter",
   "status": "completed",
@@ -253,18 +283,18 @@ X-RateLimit-Reset: 1640995200</code></pre>
   "completed_at": "2026-03-24T09:15:32Z",
   "created_at": "2026-03-23T10:30:00Z"
 }</code></pre>
-            </div>
+        </div>
 
-            <h2 id="templates">Templates</h2>
+        <h2 id="templates">Templates</h2>
 
-            <h3>Create Template</h3>
-            <div class="code-block">
-                <pre><code>POST /api/v1/templates</code></pre>
-            </div>
+        <h3>Create Template</h3>
+        <div class="code-block">
+          <pre><code>POST /api/v1/templates</code></pre>
+        </div>
 
-            <p><strong>Request Body:</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <p><strong>Request Body:</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "name": "welcome_email",
   "description": "Welcome email for new users",
   "channels": ["email"],
@@ -276,33 +306,33 @@ X-RateLimit-Reset: 1640995200</code></pre>
     "app_name": "MyApp"
   }
 }</code></pre>
-            </div>
+        </div>
 
-            <h3>List Templates</h3>
-            <div class="code-block">
-                <pre><code>GET /api/v1/templates?channel=email&is_active=true</code></pre>
-            </div>
+        <h3>List Templates</h3>
+        <div class="code-block">
+          <pre><code>GET /api/v1/templates?channel=email&is_active=true</code></pre>
+        </div>
 
-            <h3>Update Template</h3>
-            <div class="code-block">
-                <pre><code>PUT /api/v1/templates/{id}</code></pre>
-            </div>
+        <h3>Update Template</h3>
+        <div class="code-block">
+          <pre><code>PUT /api/v1/templates/{id}</code></pre>
+        </div>
 
-            <h3>Delete Template</h3>
-            <div class="code-block">
-                <pre><code>DELETE /api/v1/templates/{id}</code></pre>
-            </div>
+        <h3>Delete Template</h3>
+        <div class="code-block">
+          <pre><code>DELETE /api/v1/templates/{id}</code></pre>
+        </div>
 
-            <h2 id="inbox">Inbox (In-App Notifications)</h2>
+        <h2 id="inbox">Inbox (In-App Notifications)</h2>
 
-            <h3>Get User Inbox</h3>
-            <div class="code-block">
-                <pre><code>GET /api/v1/inbox?user_id=12345&include_archived=false&limit=20</code></pre>
-            </div>
+        <h3>Get User Inbox</h3>
+        <div class="code-block">
+          <pre><code>GET /api/v1/inbox?user_id=12345&include_archived=false&limit=20</code></pre>
+        </div>
 
-            <p><strong>Response (200 OK):</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <p><strong>Response (200 OK):</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "items": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440004",
@@ -317,28 +347,28 @@ X-RateLimit-Reset: 1640995200</code></pre>
   "unread_count": 5,
   "total_count": 20
 }</code></pre>
-            </div>
+        </div>
 
-            <h3>Mark as Read</h3>
-            <div class="code-block">
-                <pre><code>POST /api/v1/inbox/{id}/read</code></pre>
-            </div>
+        <h3>Mark as Read</h3>
+        <div class="code-block">
+          <pre><code>POST /api/v1/inbox/{id}/read</code></pre>
+        </div>
 
-            <h3>Mark All as Read</h3>
-            <div class="code-block">
-                <pre><code>POST /api/v1/inbox/read-all?user_id=12345</code></pre>
-            </div>
+        <h3>Mark All as Read</h3>
+        <div class="code-block">
+          <pre><code>POST /api/v1/inbox/read-all?user_id=12345</code></pre>
+        </div>
 
-            <h3>Real-Time Notifications (SSE)</h3>
-            <p>Connect to the SSE endpoint to receive real-time notifications:</p>
-            <div class="code-block">
-                <pre><code>GET /api/v1/inbox/stream?user_id=12345
+        <h3>Real-Time Notifications (SSE)</h3>
+        <p>Connect to the SSE endpoint to receive real-time notifications:</p>
+        <div class="code-block">
+          <pre><code>GET /api/v1/inbox/stream?user_id=12345
 Accept: text/event-stream</code></pre>
-            </div>
+        </div>
 
-            <p><strong>Example JavaScript Client:</strong></p>
-            <div class="code-block">
-                <pre><code>const eventSource = new EventSource('/api/v1/inbox/stream?user_id=12345');
+        <p><strong>Example JavaScript Client:</strong></p>
+        <div class="code-block">
+          <pre><code>const eventSource = new EventSource('/api/v1/inbox/stream?user_id=12345');
 
 eventSource.addEventListener('notification', (event) => {
   const notification = JSON.parse(event.data);
@@ -351,18 +381,18 @@ eventSource.addEventListener('notification', (event) => {
 eventSource.onerror = (error) => {
   console.error('SSE error:', error);
 };</code></pre>
-            </div>
+        </div>
 
-            <h2 id="datasources">Datasources</h2>
+        <h2 id="datasources">Datasources</h2>
 
-            <h3>Create Datasource</h3>
-            <div class="code-block">
-                <pre><code>POST /api/v1/datasources</code></pre>
-            </div>
+        <h3>Create Datasource</h3>
+        <div class="code-block">
+          <pre><code>POST /api/v1/datasources</code></pre>
+        </div>
 
-            <p><strong>Request Body (Google Sheets):</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <p><strong>Request Body (Google Sheets):</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "name": "Newsletter Subscribers",
   "type": "google_sheets",
   "config": {
@@ -376,11 +406,11 @@ eventSource.onerror = (error) => {
     "phone": "C"
   }
 }</code></pre>
-            </div>
+        </div>
 
-            <p><strong>Request Body (CSV):</strong></p>
-            <div class="code-block">
-                <pre><code>{
+        <p><strong>Request Body (CSV):</strong></p>
+        <div class="code-block">
+          <pre><code>{
   "name": "Customer List",
   "type": "csv",
   "config": {
@@ -393,20 +423,23 @@ eventSource.onerror = (error) => {
     "phone": "phone_number"
   }
 }</code></pre>
-            </div>
+        </div>
 
-            <h3>List Datasources</h3>
-            <div class="code-block">
-                <pre><code>GET /api/v1/datasources</code></pre>
-            </div>
+        <h3>List Datasources</h3>
+        <div class="code-block">
+          <pre><code>GET /api/v1/datasources</code></pre>
+        </div>
 
-            <h2 id="errors">Error Handling</h2>
+        <h2 id="errors">Error Handling</h2>
 
-            <p>The API uses standard HTTP status codes and returns errors in a consistent format:</p>
+        <p>
+          The API uses standard HTTP status codes and returns errors in a
+          consistent format:
+        </p>
 
-            <h3>Error Response Format</h3>
-            <div class="code-block">
-                <pre><code>{
+        <h3>Error Response Format</h3>
+        <div class="code-block">
+          <pre><code>{
   "error": {
     "code": "validation_error",
     "message": "Invalid request parameters",
@@ -418,62 +451,72 @@ eventSource.onerror = (error) => {
     ]
   }
 }</code></pre>
-            </div>
+        </div>
 
-            <h3>Common Status Codes</h3>
-            <ul>
-                <li><code>200 OK</code>: Request successful</li>
-                <li><code>201 Created</code>: Resource created successfully</li>
-                <li><code>400 Bad Request</code>: Invalid request parameters</li>
-                <li><code>401 Unauthorized</code>: Missing or invalid API key</li>
-                <li><code>403 Forbidden</code>: Insufficient permissions</li>
-                <li><code>404 Not Found</code>: Resource not found</li>
-                <li><code>429 Too Many Requests</code>: Rate limit exceeded</li>
-                <li><code>500 Internal Server Error</code>: Server error</li>
-                <li><code>503 Service Unavailable</code>: Service temporarily unavailable</li>
-            </ul>
+        <h3>Common Status Codes</h3>
+        <ul>
+          <li><code>200 OK</code>: Request successful</li>
+          <li><code>201 Created</code>: Resource created successfully</li>
+          <li><code>400 Bad Request</code>: Invalid request parameters</li>
+          <li><code>401 Unauthorized</code>: Missing or invalid API key</li>
+          <li><code>403 Forbidden</code>: Insufficient permissions</li>
+          <li><code>404 Not Found</code>: Resource not found</li>
+          <li><code>429 Too Many Requests</code>: Rate limit exceeded</li>
+          <li><code>500 Internal Server Error</code>: Server error</li>
+          <li>
+            <code>503 Service Unavailable</code>: Service temporarily
+            unavailable
+          </li>
+        </ul>
 
-            <h3>Error Codes</h3>
-            <ul>
-                <li><code>validation_error</code>: Request validation failed</li>
-                <li><code>authentication_error</code>: Authentication failed</li>
-                <li><code>authorization_error</code>: Insufficient permissions</li>
-                <li><code>rate_limit_error</code>: Rate limit exceeded</li>
-                <li><code>resource_not_found</code>: Resource not found</li>
-                <li><code>provider_error</code>: External provider error</li>
-                <li><code>internal_error</code>: Internal server error</li>
-            </ul>
+        <h3>Error Codes</h3>
+        <ul>
+          <li><code>validation_error</code>: Request validation failed</li>
+          <li><code>authentication_error</code>: Authentication failed</li>
+          <li><code>authorization_error</code>: Insufficient permissions</li>
+          <li><code>rate_limit_error</code>: Rate limit exceeded</li>
+          <li><code>resource_not_found</code>: Resource not found</li>
+          <li><code>provider_error</code>: External provider error</li>
+          <li><code>internal_error</code>: Internal server error</li>
+        </ul>
 
-            <div class="info-box">
-                <strong><i class="fas fa-info-circle"></i> Need Help?</strong>
-                <p>Check out the <a href="guides.html">Guides</a> for common use cases and examples, or visit our <a href="https://github.com/ediflix/buzz-service" target="_blank">GitHub repository</a> for issues and discussions.</p>
-            </div>
-        </main>
+        <div class="info-box">
+          <strong><i class="fas fa-info-circle"></i> Need Help?</strong>
+          <p>
+            Check out the <a href="guides.html">Guides</a> for common use cases
+            and examples, or visit our
+            <a href="https://github.com/elight/buzz-service" target="_blank"
+              >GitHub repository</a
+            >
+            for issues and discussions.
+          </p>
+        </div>
+      </main>
     </div>
 
     <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Buzz Notification Service</h4>
-                    <p>Open-source multi-channel notification platform</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Documentation</h4>
-                    <ul>
-                        <li><a href="architecture.html">Architecture</a></li>
-                        <li><a href="api.html">API Reference</a></li>
-                        <li><a href="guides.html">Guides</a></li>
-                        <li><a href="deployment.html">Deployment</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 Buzz Notification Service. Licensed under MIT.</p>
-            </div>
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-section">
+            <h4>Buzz Notification Service</h4>
+            <p>Open-source multi-channel notification platform</p>
+          </div>
+          <div class="footer-section">
+            <h4>Documentation</h4>
+            <ul>
+              <li><a href="architecture.html">Architecture</a></li>
+              <li><a href="api.html">API Reference</a></li>
+              <li><a href="guides.html">Guides</a></li>
+              <li><a href="deployment.html">Deployment</a></li>
+            </ul>
+          </div>
         </div>
+        <div class="footer-bottom">
+          <p>&copy; 2026 Buzz Notification Service. Licensed under MIT.</p>
+        </div>
+      </div>
     </footer>
 
     <script src="../assets/js/script.js"></script>
-</body>
+  </body>
 </html>
