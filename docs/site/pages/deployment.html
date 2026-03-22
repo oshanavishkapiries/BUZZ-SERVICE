@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment - Buzz Notification Service</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-bell"></i>
+                <span>Buzz</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="architecture.html">Architecture</a></li>
+                <li><a href="api.html">API Reference</a></li>
+                <li><a href="guides.html">Guides</a></li>
+                <li><a href="deployment.html" class="active">Deployment</a></li>
+                <li><a href="https://github.com/ediflix/buzz-service" target="_blank"><i class="fab fa-github"></i></a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="doc-container">
+        <aside class="sidebar">
+            <h3>On This Page</h3>
+            <ul>
+                <li><a href="#docker-compose">Docker Compose</a></li>
+                <li><a href="#kubernetes">Kubernetes</a></li>
+                <li><a href="#configuration">Configuration</a></li>
+                <li><a href="#providers">Provider Setup</a></li>
+                <li><a href="#monitoring">Monitoring</a></li>
+                <li><a href="#scaling">Scaling</a></li>
+            </ul>
+        </aside>
+
+        <main class="doc-content">
+            <h1>Deployment Guide</h1>
+            <p>Deploy Buzz Notification Service in various environments.</p>
+
+            <h2 id="docker-compose">Docker Compose (Development & Testing)</h2>
+
+            <h3>Quick Start</h3>
+            <div class="code-block">
+                <pre><code># Clone the repository
+git clone https://github.com/ediflix/buzz-service.git
+cd buzz-service
+
+# Copy environment file
+cp .env.example .env
+
+# Edit configuration
+nano .env
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f buzz-service</code></pre>
+            </div>
+
+            <h3>docker-compose.yml Overview</h3>
+            <p>The Docker Compose setup includes:</p>
+            <ul>
+                <li><strong>buzz-service</strong>: Main API server and workers</li>
+                <li><strong>postgres</strong>: PostgreSQL 15 database</li>
+                <li><strong>redis</strong>: Redis 7 for queuing</li>
+            </ul>
+
+            <h3>Useful Commands</h3>
+            <div class="code-block">
+                <pre><code># Stop all services
+docker-compose down
+
+# Restart specific service
+docker-compose restart buzz-service
+
+# View database logs
+docker-compose logs postgres
+
+# Execute database migrations
+docker-compose exec buzz-service /app/buzz-service migrate
+
+# Access PostgreSQL CLI
+docker-compose exec postgres psql -U buzz -d buzzdb</code></pre>
+            </div>
+
+            <h2 id="kubernetes">Kubernetes (Production)</h2>
+
+            <h3>Prerequisites</h3>
+            <ul>
+                <li>Kubernetes cluster (1.24+)</li>
+                <li>kubectl configured</li>
+                <li>Helm 3 (optional, recommended)</li>
+                <li>External PostgreSQL database</li>
+                <li>External Redis instance or cluster</li>
+            </ul>
+
+            <h3>1. Create Namespace</h3>
+            <div class="code-block">
+                <pre><code>kubectl create namespace buzz</code></pre>
+            </div>
+
+            <h3>2. Create Secrets</h3>
+            <div class="code-block">
+                <pre><code>kubectl create secret generic buzz-secrets \
+  --from-literal=db-password='YOUR_DB_PASSWORD' \
+  --from-literal=redis-password='YOUR_REDIS_PASSWORD' \
+  --from-literal=ses-access-key='YOUR_SES_KEY' \
+  --from-literal=ses-secret-key='YOUR_SES_SECRET' \
+  --from-literal=fcm-server-key='YOUR_FCM_KEY' \
+  --namespace=buzz</code></pre>
+            </div>
+
+            <h3>3. Create ConfigMap</h3>
+            <div class="code-block">
+                <pre><code>apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buzz-config
+  namespace: buzz
+data:
+  DB_HOST: "postgres.database.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "buzzdb"
+  DB_USER: "buzz"
+  REDIS_HOST: "redis.cache.svc.cluster.local"
+  REDIS_PORT: "6379"
+  SERVER_PORT: "8080"
+  LOG_LEVEL: "info"
+  ENVIRONMENT: "production"</code></pre>
+            </div>
+
+            <h3>4. Deploy Application</h3>
+            <div class="code-block">
+                <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buzz-api
+  namespace: buzz
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: buzz-api
+  template:
+    metadata:
+      labels:
+        app: buzz-api
+    spec:
+      containers:
+      - name: buzz
+        image: ghcr.io/ediflix/buzz-service:latest
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: buzz-config
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: buzz-secrets
+              key: db-password
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: buzz-secrets
+              key: redis-password
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5</code></pre>
+            </div>
+
+            <h3>5. Deploy Workers</h3>
+            <div class="code-block">
+                <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buzz-workers
+  namespace: buzz
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: buzz-workers
+  template:
+    metadata:
+      labels:
+        app: buzz-workers
+    spec:
+      containers:
+      - name: worker
+        image: ghcr.io/ediflix/buzz-service:latest
+        command: ["/app/buzz-service", "worker"]
+        envFrom:
+        - configMapRef:
+            name: buzz-config
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: buzz-secrets
+              key: db-password
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"</code></pre>
+            </div>
+
+            <h3>6. Create Service & Ingress</h3>
+            <div class="code-block">
+                <pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: buzz-api
+  namespace: buzz
+spec:
+  selector:
+    app: buzz-api
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: buzz-ingress
+  namespace: buzz
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - notifications.yourdomain.com
+    secretName: buzz-tls
+  rules:
+  - host: notifications.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: buzz-api
+            port:
+              number: 80</code></pre>
+            </div>
+
+            <h2 id="configuration">Configuration</h2>
+
+            <h3>Environment Variables</h3>
+            <p>Configure the service using environment variables:</p>
+
+            <div class="code-block">
+                <pre><code># Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=buzzdb
+DB_USER=buzz
+DB_PASSWORD=your_secure_password
+DB_SSL_MODE=disable
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# Server
+SERVER_PORT=8080
+SERVER_READ_TIMEOUT=30s
+SERVER_WRITE_TIMEOUT=30s
+
+# Logging
+LOG_LEVEL=info
+LOG_FORMAT=json
+
+# Email Providers
+EMAIL_PROVIDER=ses
+SES_REGION=us-east-1
+SES_ACCESS_KEY_ID=your_access_key
+SES_SECRET_ACCESS_KEY=your_secret_key
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+
+# SMS Providers
+SMS_PROVIDER=notifylk
+NOTIFYLK_API_KEY=your_notifylk_key
+NOTIFYLK_USER_ID=your_user_id
+TWILIO_ACCOUNT_SID=your_twilio_sid
+TWILIO_AUTH_TOKEN=your_twilio_token
+TWILIO_FROM_NUMBER=+1234567890
+
+# Push Notifications
+FCM_SERVER_KEY=your_fcm_server_key
+FCM_PROJECT_ID=your_firebase_project
+
+# Worker Configuration
+WORKER_CONCURRENCY=10
+WORKER_QUEUES=default,high-priority,low-priority
+
+# Rate Limiting
+RATE_LIMIT_ENABLED=true
+DEFAULT_RATE_LIMIT_PER_MINUTE=100</code></pre>
+            </div>
+
+            <h2 id="providers">Provider Setup</h2>
+
+            <h3>Amazon SES Setup</h3>
+            <ol>
+                <li>Create AWS account and navigate to SES</li>
+                <li>Verify your sending domain</li>
+                <li>Create IAM user with SES send permissions</li>
+                <li>Generate access keys</li>
+                <li>Add keys to configuration</li>
+            </ol>
+
+            <div class="code-block">
+                <pre><code>EMAIL_PROVIDER=ses
+SES_REGION=us-east-1
+SES_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+SES_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY</code></pre>
+            </div>
+
+            <h3>NotifyLK Setup (Sri Lanka SMS)</h3>
+            <ol>
+                <li>Register at <a href="https://www.notify.lk" target="_blank">notify.lk</a></li>
+                <li>Get API credentials</li>
+                <li>Add to configuration</li>
+            </ol>
+
+            <div class="code-block">
+                <pre><code>SMS_PROVIDER=notifylk
+NOTIFYLK_API_KEY=your_api_key
+NOTIFYLK_USER_ID=your_user_id
+NOTIFYLK_SENDER_ID=YourBrand</code></pre>
+            </div>
+
+            <h3>Firebase Cloud Messaging Setup</h3>
+            <ol>
+                <li>Create Firebase project</li>
+                <li>Enable Cloud Messaging</li>
+                <li>Get server key from Project Settings</li>
+                <li>Add to configuration</li>
+            </ol>
+
+            <div class="code-block">
+                <pre><code>FCM_SERVER_KEY=AAAA1234567890abcdefghijklmnopqrstuvwxyz
+FCM_PROJECT_ID=your-project-id</code></pre>
+            </div>
+
+            <h2 id="monitoring">Monitoring & Observability</h2>
+
+            <h3>Health Checks</h3>
+            <div class="code-block">
+                <pre><code># Basic health check
+curl http://localhost:8080/health
+
+# Detailed health with database status
+curl http://localhost:8080/api/v1/health</code></pre>
+            </div>
+
+            <h3>Prometheus Metrics (Coming Soon)</h3>
+            <p>Metrics will be exposed at <code>/metrics</code> endpoint:</p>
+            <ul>
+                <li>Notification counters by channel and status</li>
+                <li>API request latency histograms</li>
+                <li>Queue depth gauges</li>
+                <li>Provider error rates</li>
+                <li>Worker pool utilization</li>
+            </ul>
+
+            <h3>Structured Logging</h3>
+            <p>All logs are output in JSON format for easy parsing:</p>
+            <div class="code-block">
+                <pre><code>{
+  "level": "info",
+  "time": "2026-03-23T10:30:00Z",
+  "message": "Notification sent",
+  "notification_id": "550e8400-e29b-41d4-a716-446655440000",
+  "channel": "email",
+  "provider": "ses",
+  "duration_ms": 245
+}</code></pre>
+            </div>
+
+            <h2 id="scaling">Scaling Guidelines</h2>
+
+            <h3>Horizontal Scaling</h3>
+            <p>Scale components independently based on load:</p>
+
+            <div class="code-block">
+                <pre><code># Scale API servers
+kubectl scale deployment buzz-api --replicas=10 -n buzz
+
+# Scale workers
+kubectl scale deployment buzz-workers --replicas=20 -n buzz</code></pre>
+            </div>
+
+            <h3>Database Scaling</h3>
+            <ul>
+                <li>Use read replicas for query scaling</li>
+                <li>Enable connection pooling (PgBouncer)</li>
+                <li>Implement table partitioning for large tables</li>
+                <li>Regular vacuuming and index maintenance</li>
+            </ul>
+
+            <h3>Redis Scaling</h3>
+            <ul>
+                <li>Use Redis Cluster for high availability</li>
+                <li>Separate caching and queuing instances</li>
+                <li>Monitor memory usage and eviction policies</li>
+            </ul>
+
+            <h3>Performance Benchmarks</h3>
+            <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+                <thead>
+                    <tr style="background: var(--light-bg);">
+                        <th style="padding: 0.75rem; border: 1px solid var(--border-color); text-align: left;">Configuration</th>
+                        <th style="padding: 0.75rem; border: 1px solid var(--border-color); text-align: left;">Throughput</th>
+                        <th style="padding: 0.75rem; border: 1px solid var(--border-color); text-align: left;">Latency (p95)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">Single API + 5 Workers</td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">~1,000/min</td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">50ms</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">3 API + 20 Workers</td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">~10,000/min</td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">45ms</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">10 API + 50 Workers</td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">~50,000/min</td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border-color);">40ms</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="warning-box">
+                <strong><i class="fas fa-exclamation-triangle"></i> Production Checklist</strong>
+                <ul>
+                    <li>Enable HTTPS with valid SSL certificates</li>
+                    <li>Set up database backups and disaster recovery</li>
+                    <li>Configure Redis persistence (AOF or RDB)</li>
+                    <li>Implement log aggregation (ELK, Loki, etc.)</li>
+                    <li>Set up monitoring and alerting</li>
+                    <li>Review and set appropriate rate limits</li>
+                    <li>Secure secrets management (Vault, AWS Secrets Manager)</li>
+                    <li>Network security and firewall rules</li>
+                    <li>Regular security updates</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Buzz Notification Service</h4>
+                    <p>Open-source multi-channel notification platform</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="architecture.html">Architecture</a></li>
+                        <li><a href="api.html">API Reference</a></li>
+                        <li><a href="guides.html">Guides</a></li>
+                        <li><a href="deployment.html">Deployment</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Buzz Notification Service. Licensed under MIT.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/script.js"></script>
+</body>
+</html>

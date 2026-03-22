@@ -111,8 +111,26 @@ Currently implementing **Phase 02: Database Schema & Migration System** ✅
 
 ## Documentation
 
+### 📚 [Full Documentation Site](docs/site/index.html)
+
+Access comprehensive documentation including:
+- **[Architecture](docs/site/pages/architecture.html)** - System design and components
+- **[API Reference](docs/site/pages/api.html)** - Complete API documentation with examples
+- **[How-To Guides](docs/site/pages/guides.html)** - Step-by-step tutorials for common use cases
+- **[Deployment Guide](docs/site/pages/deployment.html)** - Docker, Kubernetes, and production setup
+
+### View Documentation Locally
+
+```bash
+# Serve documentation site
+./build-docs.sh serve
+
+# Visit http://localhost:8000
+```
+
+### Other Resources
+
 - [Implementation Plan](docs/ai/v-1.0.0-impl-plan/) - Detailed phase-by-phase implementation guide
-- API Documentation - Coming soon
 
 ## License
 

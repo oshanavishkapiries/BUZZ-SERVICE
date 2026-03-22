@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guides - Buzz Notification Service</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-bell"></i>
+                <span>Buzz</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="architecture.html">Architecture</a></li>
+                <li><a href="api.html">API Reference</a></li>
+                <li><a href="guides.html" class="active">Guides</a></li>
+                <li><a href="deployment.html">Deployment</a></li>
+                <li><a href="https://github.com/ediflix/buzz-service" target="_blank"><i class="fab fa-github"></i></a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="doc-container">
+        <aside class="sidebar">
+            <h3>On This Page</h3>
+            <ul>
+                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="#send-email">Send Email</a></li>
+                <li><a href="#send-sms">Send SMS</a></li>
+                <li><a href="#send-push">Send Push</a></li>
+                <li><a href="#templates">Using Templates</a></li>
+                <li><a href="#bulk">Bulk Sending</a></li>
+                <li><a href="#inbox">In-App Inbox</a></li>
+            </ul>
+        </aside>
+
+        <main class="doc-content">
+            <h1>How-To Guides</h1>
+            <p>Step-by-step guides for common use cases.</p>
+
+            <h2 id="getting-started">Getting Started</h2>
+
+            <h3>1. Obtain an API Key</h3>
+            <p>First, you need an API key to authenticate your requests. Contact your administrator or use the management interface to create a new API key.</p>
+
+            <div class="code-block">
+                <pre><code># API key format
+bz_live_1234567890abcdefghijklmnopqrstuv</code></pre>
+            </div>
+
+            <h3>2. Test the Connection</h3>
+            <p>Verify your API key works by checking the health endpoint:</p>
+
+            <div class="code-block">
+                <pre><code>curl -X GET https://your-domain.com/health \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+            </div>
+
+            <h2 id="send-email">Send Email Notification</h2>
+
+            <h3>Simple Email</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/notifications \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "email",
+    "recipient": {
+      "email": "user@example.com",
+      "name": "John Doe"
+    },
+    "subject": "Welcome to Our Platform",
+    "body": "Hi John, welcome aboard!",
+    "html_body": "<h1>Welcome!</h1><p>Hi John, welcome aboard!</p>"
+  }'</code></pre>
+            </div>
+
+            <h3>Email with Attachments (Coming Soon)</h3>
+            <div class="code-block">
+                <pre><code>{
+  "channel": "email",
+  "recipient": {"email": "user@example.com"},
+  "subject": "Your Invoice",
+  "body": "Please find your invoice attached.",
+  "attachments": [
+    {
+      "filename": "invoice.pdf",
+      "content_type": "application/pdf",
+      "url": "https://example.com/invoices/123.pdf"
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h2 id="send-sms">Send SMS Notification</h2>
+
+            <h3>Simple SMS</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/notifications \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "sms",
+    "recipient": {
+      "phone": "+94771234567"
+    },
+    "body": "Your verification code is: 123456"
+  }'</code></pre>
+            </div>
+
+            <h3>SMS with Custom Sender ID</h3>
+            <div class="code-block">
+                <pre><code>{
+  "channel": "sms",
+  "recipient": {
+    "phone": "+94771234567"
+  },
+  "body": "Your OTP is: 123456. Valid for 5 minutes.",
+  "metadata": {
+    "sender_id": "YourBrand"
+  }
+}</code></pre>
+            </div>
+
+            <h2 id="send-push">Send Push Notification</h2>
+
+            <h3>Register Device Token</h3>
+            <p>Before sending push notifications, register the device token:</p>
+
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/device-tokens \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "12345",
+    "token": "fcm-device-token-here",
+    "platform": "android",
+    "device_name": "Samsung Galaxy S21"
+  }'</code></pre>
+            </div>
+
+            <h3>Send Push Notification</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/notifications \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "push",
+    "recipient": {
+      "user_id": "12345"
+    },
+    "subject": "New Message",
+    "body": "You have a new message from support",
+    "metadata": {
+      "icon": "notification_icon",
+      "sound": "default",
+      "badge": 1
+    }
+  }'</code></pre>
+            </div>
+
+            <h2 id="templates">Using Templates</h2>
+
+            <h3>1. Create a Template</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/templates \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "password_reset",
+    "description": "Password reset email",
+    "channels": ["email"],
+    "subject": "Reset Your Password",
+    "body": "Hi {{name}},\n\nYour password reset code is: {{reset_code}}\n\nValid for {{expiry_minutes}} minutes.",
+    "variables": ["name", "reset_code", "expiry_minutes"],
+    "default_values": {
+      "expiry_minutes": "15"
+    }
+  }'</code></pre>
+            </div>
+
+            <h3>2. Use the Template</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/notifications \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "email",
+    "recipient": {
+      "email": "user@example.com"
+    },
+    "template_id": "550e8400-e29b-41d4-a716-446655440001",
+    "variables": {
+      "name": "John Doe",
+      "reset_code": "ABC123"
+    }
+  }'</code></pre>
+            </div>
+
+            <h2 id="bulk">Bulk Sending</h2>
+
+            <h3>1. Create a Datasource (Google Sheets)</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/datasources \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Newsletter Subscribers",
+    "type": "google_sheets",
+    "config": {
+      "sheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+      "range": "Sheet1!A2:C1000"
+    },
+    "column_mapping": {
+      "email": "A",
+      "name": "B",
+      "company": "C"
+    }
+  }'</code></pre>
+            </div>
+
+            <h3>2. Create a Batch</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/batches \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Weekly Newsletter - March 2026",
+    "channel": "email",
+    "template_id": "550e8400-e29b-41d4-a716-446655440001",
+    "datasource_id": "550e8400-e29b-41d4-a716-446655440002",
+    "config": {
+      "rate_limit": 100,
+      "priority": "normal"
+    }
+  }'</code></pre>
+            </div>
+
+            <h3>3. Monitor Batch Progress</h3>
+            <div class="code-block">
+                <pre><code>curl -X GET https://your-domain.com/api/v1/batches/BATCH_ID \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+            </div>
+
+            <p><strong>Response:</strong></p>
+            <div class="code-block">
+                <pre><code>{
+  "id": "550e8400-e29b-41d4-a716-446655440003",
+  "name": "Weekly Newsletter - March 2026",
+  "status": "processing",
+  "total_count": 1000,
+  "success_count": 750,
+  "failed_count": 10,
+  "pending_count": 240
+}</code></pre>
+            </div>
+
+            <h2 id="inbox">In-App Notification Inbox</h2>
+
+            <h3>1. Send In-App Notification</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/notifications \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "in_app",
+    "recipient": {
+      "user_id": "12345"
+    },
+    "subject": "New Feature Available",
+    "body": "Check out our new dashboard redesign!",
+    "metadata": {
+      "type": "info",
+      "action_url": "/dashboard",
+      "action_text": "View Dashboard",
+      "icon_url": "https://example.com/icons/dashboard.png"
+    }
+  }'</code></pre>
+            </div>
+
+            <h3>2. Fetch User Inbox</h3>
+            <div class="code-block">
+                <pre><code>curl -X GET "https://your-domain.com/api/v1/inbox?user_id=12345&limit=20" \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+            </div>
+
+            <h3>3. Real-Time Notifications (SSE)</h3>
+            <p>Connect to the SSE endpoint in your frontend:</p>
+
+            <div class="code-block">
+                <pre><code>// JavaScript/TypeScript
+const eventSource = new EventSource(
+  'https://your-domain.com/api/v1/inbox/stream?user_id=12345'
+);
+
+eventSource.addEventListener('notification', (event) => {
+  const notification = JSON.parse(event.data);
+  
+  // Show toast/banner
+  showNotificationBanner({
+    title: notification.title,
+    body: notification.body,
+    icon: notification.icon_url
+  });
+  
+  // Update unread count
+  updateUnreadCount();
+});
+
+eventSource.onerror = (error) => {
+  console.error('Connection error:', error);
+  // Implement reconnection logic
+};</code></pre>
+            </div>
+
+            <h3>4. Mark as Read</h3>
+            <div class="code-block">
+                <pre><code>curl -X POST https://your-domain.com/api/v1/inbox/NOTIFICATION_ID/read \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+            </div>
+
+            <div class="success-box">
+                <strong><i class="fas fa-check-circle"></i> Best Practices</strong>
+                <ul>
+                    <li>Always validate recipient data before sending</li>
+                    <li>Use templates for consistency</li>
+                    <li>Set appropriate priority levels</li>
+                    <li>Monitor batch progress for large sends</li>
+                    <li>Handle webhooks for delivery status updates</li>
+                    <li>Implement exponential backoff for retries</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Buzz Notification Service</h4>
+                    <p>Open-source multi-channel notification platform</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="architecture.html">Architecture</a></li>
+                        <li><a href="api.html">API Reference</a></li>
+                        <li><a href="guides.html">Guides</a></li>
+                        <li><a href="deployment.html">Deployment</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Buzz Notification Service. Licensed under MIT.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/script.js"></script>
+</body>
+</html>

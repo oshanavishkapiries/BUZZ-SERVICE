@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "elight-buzz-collection",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

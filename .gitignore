@@ -33,3 +33,6 @@ vendor/
 # Temporary files
 tmp/
 temp/
+
+# Documentation build
+docs/site/dist/

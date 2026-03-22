@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture - Buzz Notification Service</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-bell"></i>
+                <span>Buzz</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="architecture.html" class="active">Architecture</a></li>
+                <li><a href="api.html">API Reference</a></li>
+                <li><a href="guides.html">Guides</a></li>
+                <li><a href="deployment.html">Deployment</a></li>
+                <li><a href="https://github.com/ediflix/buzz-service" target="_blank"><i class="fab fa-github"></i></a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="doc-container">
+        <aside class="sidebar">
+            <h3>On This Page</h3>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#system-architecture">System Architecture</a></li>
+                <li><a href="#components">Core Components</a></li>
+                <li><a href="#data-flow">Data Flow</a></li>
+                <li><a href="#channels">Notification Channels</a></li>
+                <li><a href="#database-schema">Database Schema</a></li>
+                <li><a href="#scalability">Scalability</a></li>
+                <li><a href="#security">Security</a></li>
+            </ul>
+        </aside>
+
+        <main class="doc-content">
+            <h1>Architecture</h1>
+            <p>Understand the technical architecture and design decisions behind Buzz Notification Service.</p>
+
+            <h2 id="overview">Overview</h2>
+            <p>Buzz is designed as a highly scalable, multi-channel notification delivery platform built with modern cloud-native principles. The architecture follows a microservices-inspired approach with clear separation of concerns.</p>
+
+            <div class="info-box">
+                <strong><i class="fas fa-info-circle"></i> Design Principles</strong>
+                <ul>
+                    <li>Horizontal scalability through stateless design</li>
+                    <li>Queue-based asynchronous processing</li>
+                    <li>Provider abstraction for flexibility</li>
+                    <li>Comprehensive observability</li>
+                    <li>Fault tolerance and retry mechanisms</li>
+                </ul>
+            </div>
+
+            <h2 id="system-architecture">System Architecture</h2>
+            <p>The system is composed of several interconnected components working together to provide reliable notification delivery.</p>
+
+            <div class="code-block">
+                <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                          Client Applications                     │
+│              (Web, Mobile, Backend Services, etc.)               │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             │ HTTPS/REST API
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         API Gateway Layer                        │
+│                    (Authentication, Rate Limiting)               │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        HTTP Server (Fiber)                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
+│  │ Notification │  │   Template   │  │   Batch/Datasource  │  │
+│  │     API      │  │     API      │  │        API          │  │
+│  └──────────────┘  └──────────────┘  └─────────────────────┘  │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Service Layer (Go)                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
+│  │ Notification │  │   Template   │  │    Datasource       │  │
+│  │   Service    │  │   Service    │  │     Service         │  │
+│  └──────────────┘  └──────────────┘  └─────────────────────┘  │
+└────┬────────────────────┬────────────────────┬─────────────────┘
+     │                    │                    │
+     ▼                    ▼                    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Repository Layer (Store)                      │
+│                        PostgreSQL 15+                            │
+└─────────────────────────────────────────────────────────────────┘
+     │
+     │ Enqueue Tasks
+     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Queue System (Redis)                         │
+│                         Asynq Library                            │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             │ Workers Poll
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Worker Processes                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
+│  │ Email Worker │  │  SMS Worker  │  │   Push Worker       │  │
+│  └──────────────┘  └──────────────┘  └─────────────────────┘  │
+└────┬──────────────────┬──────────────────┬──────────────────────┘
+     │                  │                  │
+     ▼                  ▼                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Provider Integrations                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
+│  │  Amazon SES  │  │  NotifyLK    │  │   Firebase FCM      │  │
+│  │     SMTP     │  │   Twilio     │  │                     │  │
+│  └──────────────┘  └──────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+     │
+     │ Delivery
+     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         End Users                                │
+│              (Email, SMS, Push, In-App)                          │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+            </div>
+
+            <h2 id="components">Core Components</h2>
+
+            <h3>1. HTTP API Server</h3>
+            <p>Built with <strong>Fiber v2</strong>, a high-performance Go web framework. Handles incoming HTTP requests and provides RESTful endpoints for notification management.</p>
+            <ul>
+                <li>Authentication and authorization</li>
+                <li>Request validation and sanitization</li>
+                <li>Rate limiting per API key</li>
+                <li>Health checks and readiness probes</li>
+            </ul>
+
+            <h3>2. Service Layer</h3>
+            <p>Contains business logic for notification processing, template management, and datasource integration.</p>
+            <ul>
+                <li><strong>Notification Service</strong>: Creates, validates, and queues notifications</li>
+                <li><strong>Template Service</strong>: Manages templates and variable substitution</li>
+                <li><strong>Batch Service</strong>: Handles bulk notification operations</li>
+                <li><strong>Datasource Service</strong>: Integrates with external data sources</li>
+            </ul>
+
+            <h3>3. Queue System</h3>
+            <p>Uses <strong>Redis</strong> with <strong>Asynq</strong> for reliable message queuing and task scheduling.</p>
+            <ul>
+                <li>Asynchronous task processing</li>
+                <li>Priority queues for urgent notifications</li>
+                <li>Automatic retry with exponential backoff</li>
+                <li>Dead letter queue for failed tasks</li>
+                <li>Scheduled/delayed notifications</li>
+            </ul>
+
+            <h3>4. Worker Pool</h3>
+            <p>Concurrent workers process queued notifications and deliver them via appropriate providers.</p>
+            <ul>
+                <li>Horizontal scalability (add more workers)</li>
+                <li>Channel-specific workers</li>
+                <li>Rate limiting per provider</li>
+                <li>Circuit breaker pattern for provider failures</li>
+            </ul>
+
+            <h3>5. Provider Abstraction</h3>
+            <p>Each notification channel has multiple provider implementations with automatic fallback.</p>
+            <ul>
+                <li><strong>Email</strong>: Amazon SES (primary), SMTP (fallback)</li>
+                <li><strong>SMS</strong>: NotifyLK (Sri Lanka), Twilio (international)</li>
+                <li><strong>Push</strong>: Firebase Cloud Messaging</li>
+                <li><strong>In-App</strong>: Server-Sent Events (SSE)</li>
+            </ul>
+
+            <h3>6. Data Layer</h3>
+            <p>PostgreSQL 15+ with comprehensive schema design for notification tracking.</p>
+            <ul>
+                <li>ACID compliance for data integrity</li>
+                <li>JSONB columns for flexible metadata</li>
+                <li>Full-text search capabilities</li>
+                <li>Partition-ready for scaling</li>
+            </ul>
+
+            <h2 id="data-flow">Data Flow</h2>
+
+            <h3>Single Notification Flow</h3>
+            <div class="code-block">
+                <pre><code>1. Client → POST /api/v1/notifications
+           ↓
+2. API validates request & API key
+           ↓
+3. Create notification record in DB (status: pending)
+           ↓
+4. Enqueue task to Redis queue
+           ↓
+5. Worker picks up task (status: processing)
+           ↓
+6. Worker calls provider (SES, Twilio, FCM, etc.)
+           ↓
+7. Update notification status (sent/failed)
+           ↓
+8. Return provider response to DB
+           ↓
+9. If failed: schedule retry with exponential backoff
+           ↓
+10. If in-app: push to SSE stream for real-time delivery</code></pre>
+            </div>
+
+            <h3>Bulk Notification Flow</h3>
+            <div class="code-block">
+                <pre><code>1. Client → POST /api/v1/batches with datasource
+           ↓
+2. Create batch record (status: pending)
+           ↓
+3. Fetch recipients from datasource (Google Sheets, CSV, etc.)
+           ↓
+4. Apply template with variable substitution
+           ↓
+5. Create individual notification records for each recipient
+           ↓
+6. Enqueue all notifications to Redis
+           ↓
+7. Update batch counters (total, pending, success, failed)
+           ↓
+8. Workers process notifications in parallel
+           ↓
+9. Update batch status when complete</code></pre>
+            </div>
+
+            <h2 id="channels">Notification Channels</h2>
+
+            <h3>Email Channel</h3>
+            <ul>
+                <li><strong>Provider</strong>: Amazon SES (primary), SMTP (fallback)</li>
+                <li><strong>Features</strong>: HTML templates, attachments, CC/BCC</li>
+                <li><strong>Tracking</strong>: Opens, clicks (via SES SNS)</li>
+                <li><strong>Rate Limit</strong>: Configured per SES quota</li>
+            </ul>
+
+            <h3>SMS Channel</h3>
+            <ul>
+                <li><strong>Provider</strong>: NotifyLK (Sri Lanka), Twilio (global)</li>
+                <li><strong>Features</strong>: Unicode support, sender ID customization</li>
+                <li><strong>Tracking</strong>: Delivery receipts via webhooks</li>
+                <li><strong>Rate Limit</strong>: Provider-specific</li>
+            </ul>
+
+            <h3>Push Notification Channel</h3>
+            <ul>
+                <li><strong>Provider</strong>: Firebase Cloud Messaging (FCM)</li>
+                <li><strong>Platforms</strong>: iOS, Android, Web</li>
+                <li><strong>Features</strong>: Data payloads, rich media, badges</li>
+                <li><strong>Device Management</strong>: Token registration and validation</li>
+            </ul>
+
+            <h3>In-App Channel</h3>
+            <ul>
+                <li><strong>Protocol</strong>: Server-Sent Events (SSE)</li>
+                <li><strong>Features</strong>: Real-time delivery, read/unread status, inbox</li>
+                <li><strong>Persistence</strong>: Messages stored in inbox table</li>
+                <li><strong>Scalability</strong>: Redis Pub/Sub for multi-instance support</li>
+            </ul>
+
+            <h2 id="database-schema">Database Schema</h2>
+            <p>The database is designed for scalability, flexibility, and comprehensive tracking.</p>
+
+            <h3>Core Tables</h3>
+            <ul>
+                <li><strong>notifications</strong>: Individual notification records with full lifecycle tracking</li>
+                <li><strong>batches</strong>: Bulk notification batches with counters and status</li>
+                <li><strong>templates</strong>: Reusable templates with variable substitution</li>
+                <li><strong>inbox</strong>: In-app notification inbox with read/unread status</li>
+                <li><strong>datasources</strong>: External data source configurations</li>
+                <li><strong>api_keys</strong>: API authentication with rate limiting</li>
+                <li><strong>device_tokens</strong>: Push notification device registrations</li>
+            </ul>
+
+            <h3>Key Features</h3>
+            <ul>
+                <li>Soft deletes on all tables</li>
+                <li>Automatic timestamps (created_at, updated_at)</li>
+                <li>JSONB for flexible metadata and configurations</li>
+                <li>Comprehensive indexes for query performance</li>
+                <li>Foreign key constraints for data integrity</li>
+            </ul>
+
+            <h2 id="scalability">Scalability</h2>
+
+            <h3>Horizontal Scaling</h3>
+            <p>All components are designed to scale horizontally:</p>
+            <ul>
+                <li><strong>API Servers</strong>: Stateless design, add more instances behind load balancer</li>
+                <li><strong>Workers</strong>: Add more worker processes to increase throughput</li>
+                <li><strong>Database</strong>: Read replicas for query scaling, partitioning for data growth</li>
+                <li><strong>Redis</strong>: Redis Cluster for high availability and scalability</li>
+            </ul>
+
+            <h3>Performance Optimizations</h3>
+            <ul>
+                <li>Connection pooling for database and Redis</li>
+                <li>Batch inserts for bulk operations</li>
+                <li>Indexes on frequently queried columns</li>
+                <li>Caching for templates and configurations</li>
+                <li>Goroutines for concurrent processing</li>
+            </ul>
+
+            <h3>Load Distribution</h3>
+            <div class="code-block">
+                <pre><code>┌──────────┐     ┌──────────┐     ┌──────────┐
+│ API #1   │     │ API #2   │     │ API #3   │
+└────┬─────┘     └────┬─────┘     └────┬─────┘
+     │                │                │
+     └────────────────┼────────────────┘
+                      │
+                      ▼
+            ┌─────────────────┐
+            │  Redis Queue    │
+            └─────────────────┘
+                      │
+     ┌────────────────┼────────────────┐
+     │                │                │
+     ▼                ▼                ▼
+┌──────────┐     ┌──────────┐     ┌──────────┐
+│Worker #1 │     │Worker #2 │     │Worker #3 │
+└──────────┘     └──────────┘     └──────────┘</code></pre>
+            </div>
+
+            <h2 id="security">Security</h2>
+
+            <h3>Authentication</h3>
+            <ul>
+                <li>API key-based authentication</li>
+                <li>Keys stored as bcrypt hashes</li>
+                <li>Environment-specific keys (production, staging, test)</li>
+                <li>Scoped permissions per API key</li>
+            </ul>
+
+            <h3>Rate Limiting</h3>
+            <ul>
+                <li>Per-minute, per-hour, per-day limits</li>
+                <li>Configurable per API key</li>
+                <li>Implemented using Redis sliding window</li>
+                <li>429 responses when limits exceeded</li>
+            </ul>
+
+            <h3>Data Protection</h3>
+            <ul>
+                <li>HTTPS/TLS for all communications</li>
+                <li>Encrypted secrets in configuration</li>
+                <li>No sensitive data in logs</li>
+                <li>Soft deletes for data retention compliance</li>
+            </ul>
+
+            <h3>Network Security</h3>
+            <ul>
+                <li>IP whitelisting for API keys</li>
+                <li>Firewall rules for database and Redis</li>
+                <li>Private subnets for backend services</li>
+                <li>Network policies in Kubernetes</li>
+            </ul>
+
+            <div class="success-box">
+                <strong><i class="fas fa-check-circle"></i> Production Ready</strong>
+                <p>The architecture is designed with production workloads in mind, supporting millions of notifications per day with high availability and fault tolerance.</p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Buzz Notification Service</h4>
+                    <p>Open-source multi-channel notification platform</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="architecture.html">Architecture</a></li>
+                        <li><a href="api.html">API Reference</a></li>
+                        <li><a href="guides.html">Guides</a></li>
+                        <li><a href="deployment.html">Deployment</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Buzz Notification Service. Licensed under MIT.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/script.js"></script>
+</body>
+</html>
