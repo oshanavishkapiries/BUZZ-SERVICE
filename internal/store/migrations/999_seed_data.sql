@@ -45,14 +45,14 @@ WHERE NOT EXISTS (SELECT 1 FROM templates WHERE name = 'Promotional SMS');
 
 -- Seed API Keys (for testing purposes)
 -- Test Key: buzz_test_key_123
--- SHA256 Hash: f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b
+-- SHA256 Hash: be1821aec251a0c3191119b5d182f931442ba3dc2be5372234d35ebe9b550224
 INSERT INTO api_keys (
     id, name, description, key_hash, key_prefix, environment, scopes,
     rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
     is_active, created_at, updated_at
 )
 SELECT gen_random_uuid(), 'Test API Key - Development', 'API key for development and testing',
-    'f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b', 'buzz_tes', 'test',
+    'be1821aec251a0c3191119b5d182f931442ba3dc2be5372234d35ebe9b550224', 'buzz_tes', 'test',
     ARRAY['notification:send', 'notification:read', 'template:read', 'template:write', 'batch:write', 'batch:read'],
     1000, 10000, 100000, true, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = 'buzz_tes');
