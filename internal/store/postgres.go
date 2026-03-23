@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/elight/buzz-service/internal/config"
+	"github.com/elight/buzz-service/internal/domain"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
 
@@ -46,4 +48,27 @@ func (s *PostgresStore) Close() error {
 
 func (s *PostgresStore) Health(ctx context.Context) error {
 	return s.db.PingContext(ctx)
+}
+
+// DB returns the underlying database connection
+func (s *PostgresStore) DB() *sql.DB {
+	return s.db
+}
+
+// GetAPIKeyByKeyHash retrieves an API key by its hash
+func (s *PostgresStore) GetAPIKeyByKeyHash(ctx context.Context, keyHash string) (*domain.APIKey, error) {
+	repo := NewAPIKeyRepository(s.db)
+	return repo.GetByKeyHash(ctx, keyHash)
+}
+
+// UpdateAPIKeyUsage updates the usage statistics for an API key
+func (s *PostgresStore) UpdateAPIKeyUsage(ctx context.Context, id uuid.UUID) error {
+	repo := NewAPIKeyRepository(s.db)
+	return repo.UpdateUsage(ctx, id)
+}
+
+// GetTemplateByName retrieves a template by name
+func (s *PostgresStore) GetTemplateByName(ctx context.Context, name string) (*domain.Template, error) {
+	repo := NewTemplateRepository(s.db)
+	return repo.GetByName(ctx, name)
 }

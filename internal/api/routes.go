@@ -5,19 +5,43 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
 
 func SetupRoutes(app *fiber.App, db *store.PostgresStore) {
 	// Global middleware
 	app.Use(recover.New())
-	app.Use(cors.New())
+	app.Use(requestid.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,PATCH,DELETE,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowCredentials: false,
+	}))
 
-	// Health check
+	// Public health check
 	app.Get("/health", HealthCheck(db))
 
 	// API v1 routes
 	v1 := app.Group("/api/v1")
-	v1.Get("/health", HealthCheck(db))
+
+	// Authenticated routes
+	v1.Use(AuthMiddleware(db))
+
+	// Notifications
+	notifHandler := NewNotificationHandler(db)
+	notifications := v1.Group("/notifications")
+	notifications.Post("/", RequireScope("notification:send"), notifHandler.SendNotification)
+	notifications.Get("/", RequireScope("notification:read"), notifHandler.ListNotifications)
+	notifications.Get("/:id", RequireScope("notification:read"), notifHandler.GetNotification)
+
+	// Templates
+	templateHandler := NewTemplateHandler(db)
+	templates := v1.Group("/templates")
+	templates.Post("/", RequireScope("template:write"), templateHandler.CreateTemplate)
+	templates.Get("/", RequireScope("template:read"), templateHandler.ListTemplates)
+	templates.Get("/:name", RequireScope("template:read"), templateHandler.GetTemplate)
+	templates.Patch("/:name", RequireScope("template:write"), templateHandler.UpdateTemplate)
 }
 
 func HealthCheck(db *store.PostgresStore) fiber.Handler {

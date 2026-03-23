@@ -44,19 +44,18 @@ SELECT gen_random_uuid(), 'Promotional SMS', 'Promotional SMS for marketing camp
 WHERE NOT EXISTS (SELECT 1 FROM templates WHERE name = 'Promotional SMS');
 
 -- Seed API Keys (for testing purposes)
--- Key: bz_test_1234567890abcdef (hashed with bcrypt)
--- Hash: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy (for 'secret')
--- Using ON CONFLICT DO NOTHING to handle already existing data
+-- Test Key: buzz_test_key_123
+-- SHA256 Hash: f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b
 INSERT INTO api_keys (
     id, name, description, key_hash, key_prefix, environment, scopes,
     rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
     is_active, created_at, updated_at
 )
 SELECT gen_random_uuid(), 'Test API Key - Development', 'API key for development and testing',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'bz_test_', 'test',
-    ARRAY['notifications:write', 'notifications:read', 'templates:read', 'batches:write', 'batches:read'],
+    'f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b', 'buzz_tes', 'test',
+    ARRAY['notification:send', 'notification:read', 'template:read', 'template:write', 'batch:write', 'batch:read'],
     1000, 10000, 100000, true, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy');
+WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = 'buzz_tes');
 
 INSERT INTO api_keys (
     id, name, description, key_hash, key_prefix, environment, scopes,
@@ -64,10 +63,10 @@ INSERT INTO api_keys (
     is_active, created_at, updated_at
 )
 SELECT gen_random_uuid(), 'Production API Key - Full Access', 'Full access API key for production',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'bz_live_', 'production',
-    ARRAY['notifications:write', 'notifications:read', 'templates:write', 'templates:read', 'batches:write', 'batches:read', 'datasources:write', 'datasources:read'],
+    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'buzz_liv', 'production',
+    ARRAY['*'],
     100, 1000, 10000, true, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy');
+WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = 'buzz_liv');
 
 -- Comments
 COMMENT ON TABLE templates IS 'Seed templates contain common notification patterns';
