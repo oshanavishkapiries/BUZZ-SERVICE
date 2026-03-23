@@ -8,24 +8,11 @@
   },
   "item": [
     {
-      "name": "01-health-check",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/health",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "health"
-          ]
-        }
-      },
-      "response": [
+      "name": "01.general",
+      "item": [
         {
           "name": "01-health-check",
-          "originalRequest": {
+          "request": {
             "method": "GET",
             "header": [],
             "url": {
@@ -38,25 +25,454 @@
               ]
             }
           },
-          "status": "OK",
-          "code": 200,
-          "_postman_previewlanguage": null,
-          "header": [
+          "response": [
             {
-              "key": "Date",
-              "value": "Sun, 22 Mar 2026 20:24:00 GMT"
-            },
-            {
-              "key": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "key": "Content-Length",
-              "value": "65"
+              "name": "01-health-check",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/health",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Date",
+                  "value": "Sun, 22 Mar 2026 20:24:00 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "65"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"checks\": {\n        \"database\": \"up\"\n    },\n    \"status\": \"healthy\",\n    \"version\": \"1.0.0\"\n}"
             }
-          ],
-          "cookie": [],
-          "body": "{\n    \"checks\": {\n        \"database\": \"up\"\n    },\n    \"status\": \"healthy\",\n    \"version\": \"1.0.0\"\n}"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02.notifications",
+      "item": [
+        {
+          "name": "02.1-send-email-with-template",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"to\": \"student@example.com\",\r\n    \"channel\": \"email\",\r\n    \"priority\": \"normal\",\r\n    \"template\": \"welcome_email\",\r\n    \"data\": {\r\n      \"student_name\": \"John Doe\",\r\n      \"institution_name\": \"ABC University\"\r\n    },\r\n    \"recipient_id\": \"user123\",\r\n    \"recipient_name\": \"John Doe\"\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.2-send-email-without-template",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"to\": \"+1234567890\",\r\n    \"channel\": \"sms\",\r\n    \"priority\": \"high\",\r\n    \"body\": \"Your OTP is 123456. Valid for 5 minutes.\",\r\n    \"recipient_id\": \"user456\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.3-send-in-app-notification",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"to\": \"user789\",\r\n    \"channel\": \"in_app\",\r\n    \"priority\": \"normal\",\r\n    \"subject\": \"New Assignment Posted\",\r\n    \"body\": \"A new assignment has been posted in your course.\",\r\n    \"data\": {\r\n      \"assignment_id\": \"assign123\",\r\n      \"course_name\": \"Computer Science 101\"\r\n    }\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.4-save-notification-id-for-next-test",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"to\": \"test@example.com\",\r\n    \"channel\": \"email\",\r\n    \"subject\": \"Test\",\r\n    \"body\": \"Test notification for retrieval\"\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.5-get-notification-by-id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"to\": \"student@example.com\",\r\n    \"channel\": \"email\",\r\n    \"priority\": \"normal\",\r\n    \"template\": \"welcome_email\",\r\n    \"data\": {\r\n      \"student_name\": \"John Doe\",\r\n      \"institution_name\": \"ABC University\"\r\n    },\r\n    \"recipient_id\": \"user123\",\r\n    \"recipient_name\": \"John Doe\"\r\n  }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.6-list-notification",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"to\": \"student@example.com\",\r\n    \"channel\": \"email\",\r\n    \"priority\": \"normal\",\r\n    \"template\": \"welcome_email\",\r\n    \"data\": {\r\n      \"student_name\": \"John Doe\",\r\n      \"institution_name\": \"ABC University\"\r\n    },\r\n    \"recipient_id\": \"user123\",\r\n    \"recipient_name\": \"John Doe\"\r\n  }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications?limit=5&channel=email",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "channel",
+                  "value": "email"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03.templates",
+      "item": [
+        {
+          "name": "03.1-create-template",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\": \"assignment_reminder\",\r\n    \"channel\": \"email\",\r\n    \"subject\": \"Assignment Reminder: {{assignment_name}}\",\r\n    \"body\": \"Hi {{student_name}},\\n\\nThis is a reminder that your assignment \\\"{{assignment_name}}\\\" is due on {{due_date}}.\\n\\nBest regards,\\n{{institution_name}}\",\r\n    \"metadata\": {\r\n      \"category\": \"academic\"\r\n    }\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/templates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "templates"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03.2-get-template-by-name",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\": \"assignment_reminder\",\r\n    \"channel\": \"email\",\r\n    \"subject\": \"Assignment Reminder: {{assignment_name}}\",\r\n    \"body\": \"Hi {{student_name}},\\n\\nThis is a reminder that your assignment \\\"{{assignment_name}}\\\" is due on {{due_date}}.\\n\\nBest regards,\\n{{institution_name}}\",\r\n    \"metadata\": {\r\n      \"category\": \"academic\"\r\n    }\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/templates/assignment_reminder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "templates",
+                "assignment_reminder"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03.2-get-template-list",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\": \"assignment_reminder\",\r\n    \"channel\": \"email\",\r\n    \"subject\": \"Assignment Reminder: {{assignment_name}}\",\r\n    \"body\": \"Hi {{student_name}},\\n\\nThis is a reminder that your assignment \\\"{{assignment_name}}\\\" is due on {{due_date}}.\\n\\nBest regards,\\n{{institution_name}}\",\r\n    \"metadata\": {\r\n      \"category\": \"academic\"\r\n    }\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/templates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "templates"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03.3-update-template",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\": \"assignment_reminder\",\r\n    \"channel\": \"email\",\r\n    \"subject\": \"Assignment Reminder: {{assignment_name}}\",\r\n    \"body\": \"Hi {{student_name}},\\n\\nThis is a reminder that your assignment \\\"{{assignment_name}}\\\" is due on {{due_date}}.\\n\\nBest regards,\\n{{institution_name}}\",\r\n    \"metadata\": {\r\n      \"category\": \"academic\"\r\n    }\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/templates/assignment_reminder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "templates",
+                "assignment_reminder"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }
@@ -88,8 +504,11 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "",
-      "type": "default"
+      "value": ""
+    },
+    {
+      "key": "auth_token",
+      "value": ""
     }
   ]
 }
