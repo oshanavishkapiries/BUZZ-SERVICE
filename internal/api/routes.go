@@ -26,6 +26,12 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	// Public health check
 	app.Get("/health", HealthCheck(db))
 
+	// Webhook routes (public, no auth required)
+	webhookHandler := NewWebhookHandler(db)
+	webhooks := app.Group("/webhooks")
+	webhooks.Post("/ses", webhookHandler.HandleSESWebhook)
+	webhooks.Post("/generic", webhookHandler.HandleGenericWebhook)
+
 	// API v1 routes
 	v1 := app.Group("/api/v1")
 

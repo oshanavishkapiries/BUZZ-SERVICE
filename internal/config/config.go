@@ -13,6 +13,9 @@ type Config struct {
 	Redis    RedisConfig
 	Logger   LoggerConfig
 	Queue    QueueConfig
+	Email    EmailConfig
+	AWS      AWSConfig
+	SMTP     SMTPConfig
 }
 
 type ServerConfig struct {
@@ -49,6 +52,27 @@ type LoggerConfig struct {
 type QueueConfig struct {
 	Concurrency int
 	Queues      map[string]int // queue name -> priority weight
+}
+
+type EmailConfig struct {
+	Provider       string
+	FromEmail      string
+	FromName       string
+	RateLimitRPS   int
+}
+
+type AWSConfig struct {
+	Region          string
+	AccessKeyID     string
+	SecretAccessKey string
+}
+
+type SMTPConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	UseTLS   bool
 }
 
 func Load() (*Config, error) {
@@ -88,6 +112,21 @@ func Load() (*Config, error) {
 	viper.SetDefault("QUEUE_PUSH_WEIGHT", 2)
 	viper.SetDefault("QUEUE_INAPP_WEIGHT", 2)
 	viper.SetDefault("QUEUE_BATCH_WEIGHT", 1)
+
+	viper.SetDefault("EMAIL_PROVIDER", "smtp")
+	viper.SetDefault("EMAIL_FROM", "noreply@buzz.local")
+	viper.SetDefault("EMAIL_FROM_NAME", "Buzz Service")
+	viper.SetDefault("EMAIL_RATE_LIMIT_RPS", 10)
+
+	viper.SetDefault("AWS_REGION", "us-east-1")
+	viper.SetDefault("AWS_ACCESS_KEY_ID", "")
+	viper.SetDefault("AWS_SECRET_ACCESS_KEY", "")
+
+	viper.SetDefault("SMTP_HOST", "localhost")
+	viper.SetDefault("SMTP_PORT", 587)
+	viper.SetDefault("SMTP_USERNAME", "")
+	viper.SetDefault("SMTP_PASSWORD", "")
+	viper.SetDefault("SMTP_USE_TLS", true)
 
 	readTimeout, err := time.ParseDuration(viper.GetString("SERVER_READ_TIMEOUT"))
 	if err != nil {
@@ -136,6 +175,24 @@ func Load() (*Config, error) {
 				"in_app": viper.GetInt("QUEUE_INAPP_WEIGHT"),
 				"batch":  viper.GetInt("QUEUE_BATCH_WEIGHT"),
 			},
+		},
+		Email: EmailConfig{
+			Provider:     viper.GetString("EMAIL_PROVIDER"),
+			FromEmail:    viper.GetString("EMAIL_FROM"),
+			FromName:     viper.GetString("EMAIL_FROM_NAME"),
+			RateLimitRPS: viper.GetInt("EMAIL_RATE_LIMIT_RPS"),
+		},
+		AWS: AWSConfig{
+			Region:          viper.GetString("AWS_REGION"),
+			AccessKeyID:     viper.GetString("AWS_ACCESS_KEY_ID"),
+			SecretAccessKey: viper.GetString("AWS_SECRET_ACCESS_KEY"),
+		},
+		SMTP: SMTPConfig{
+			Host:     viper.GetString("SMTP_HOST"),
+			Port:     viper.GetInt("SMTP_PORT"),
+			Username: viper.GetString("SMTP_USERNAME"),
+			Password: viper.GetString("SMTP_PASSWORD"),
+			UseTLS:   viper.GetBool("SMTP_USE_TLS"),
 		},
 	}
 
