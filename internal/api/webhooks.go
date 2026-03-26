@@ -190,3 +190,81 @@ func (h *WebhookHandler) HandleGenericWebhook(c *fiber.Ctx) error {
 
 	return c.SendStatus(200)
 }
+
+// HandleNotifyLKWebhook processes delivery receipts from NotifyLK
+func (h *WebhookHandler) HandleNotifyLKWebhook(c *fiber.Ctx) error {
+	var payload map[string]interface{}
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid payload"})
+	}
+
+	// NotifyLK webhook format: message_id, status (delivered, failed, expired)
+	messageID, ok := payload["message_id"].(string)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "missing message_id"})
+	}
+
+	status, ok := payload["status"].(string)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "missing status"})
+	}
+
+	// Update notification status based on delivery receipt
+	switch status {
+	case "delivered":
+		// SMS confirmed delivered
+		_ = messageID
+		// In a real implementation:
+		// 1. Query notification by message ID
+		// 2. Update status to delivered
+		// 3. Record delivery timestamp
+
+	case "failed", "expired":
+		// SMS failed to deliver
+		_ = messageID
+		// In a real implementation:
+		// 1. Query notification by message ID
+		// 2. Update status to failed
+		// 3. Record error reason
+	}
+
+	return c.SendStatus(200)
+}
+
+// HandleTwilioWebhook processes Twilio status callbacks
+func (h *WebhookHandler) HandleTwilioWebhook(c *fiber.Ctx) error {
+	// Twilio sends status callbacks as form data
+	messageSID := c.FormValue("MessageSid")
+	messageStatus := c.FormValue("MessageStatus")
+	errorCode := c.FormValue("ErrorCode")
+
+	if messageSID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "missing MessageSid"})
+	}
+
+	// Twilio statuses: queued, sending, sent, delivered, undelivered, failed
+	switch messageStatus {
+	case "delivered":
+		// SMS confirmed delivered
+		_ = messageSID
+		// In a real implementation:
+		// 1. Query notification by Twilio message ID
+		// 2. Update status to delivered
+		// 3. Record delivery timestamp
+
+	case "undelivered", "failed":
+		// SMS failed to deliver
+		_ = messageSID
+		_ = errorCode
+		// In a real implementation:
+		// 1. Query notification by Twilio message ID
+		// 2. Update status to failed
+		// 3. Record error code and reason
+
+	case "queued", "sending", "sent":
+		// SMS is in progress, no action needed yet
+		_ = messageSID
+	}
+
+	return c.SendStatus(200)
+}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/elight/buzz-service/internal/config"
 	"github.com/elight/buzz-service/internal/provider/email"
+	"github.com/elight/buzz-service/internal/provider/sms"
 )
 
 // NewEmailProvider creates an email provider based on configuration
@@ -46,4 +47,56 @@ func NewEmailProvider(ctx context.Context, cfg *config.Config) (email.EmailProvi
 	}
 
 	return provider, nil
+}
+
+// NewSMSProvider creates an SMS provider based on configuration
+func NewSMSProvider(cfg *config.Config) (sms.SMSProvider, error) {
+	switch cfg.SMS.Provider {
+	case "notifylk":
+		notifyLKProvider := sms.NewNotifyLKProvider(sms.NotifyLKConfig{
+			UserID:   cfg.NotifyLK.UserID,
+			APIKey:   cfg.NotifyLK.APIKey,
+			SenderID: cfg.NotifyLK.SenderID,
+		})
+		rateLimited := sms.NewRateLimitedSMSProvider(notifyLKProvider, cfg.SMS.RateLimitPerSecond)
+		return rateLimited, nil
+
+	case "twilio":
+		twilioProvider := sms.NewTwilioProvider(sms.TwilioConfig{
+			AccountSID:          cfg.Twilio.AccountSID,
+			AuthToken:           cfg.Twilio.AuthToken,
+			FromNumber:          cfg.Twilio.FromNumber,
+			MessagingServiceSID: cfg.Twilio.MessagingServiceSID,
+		})
+		rateLimited := sms.NewRateLimitedSMSProvider(twilioProvider, cfg.SMS.RateLimitPerSecond)
+		return rateLimited, nil
+
+	case "router":
+		// Create NotifyLK provider (primary for Sri Lanka)
+		notifyLKProvider := sms.NewNotifyLKProvider(sms.NotifyLKConfig{
+			UserID:   cfg.NotifyLK.UserID,
+			APIKey:   cfg.NotifyLK.APIKey,
+			SenderID: cfg.NotifyLK.SenderID,
+		})
+
+		// Create Twilio provider (fallback for international)
+		twilioProvider := sms.NewTwilioProvider(sms.TwilioConfig{
+			AccountSID:          cfg.Twilio.AccountSID,
+			AuthToken:           cfg.Twilio.AuthToken,
+			FromNumber:          cfg.Twilio.FromNumber,
+			MessagingServiceSID: cfg.Twilio.MessagingServiceSID,
+		})
+
+		// Create router with NotifyLK as primary, Twilio as fallback
+		router := sms.NewSMSRouter(
+			[]sms.SMSProvider{notifyLKProvider},
+			twilioProvider,
+		)
+
+		rateLimited := sms.NewRateLimitedSMSProvider(router, cfg.SMS.RateLimitPerSecond)
+		return rateLimited, nil
+
+	default:
+		return nil, fmt.Errorf("unknown SMS provider: %s", cfg.SMS.Provider)
+	}
 }

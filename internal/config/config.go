@@ -16,6 +16,9 @@ type Config struct {
 	Email    EmailConfig
 	AWS      AWSConfig
 	SMTP     SMTPConfig
+	SMS      SMSConfig
+	NotifyLK NotifyLKConfigStruct
+	Twilio   TwilioConfigStruct
 }
 
 type ServerConfig struct {
@@ -75,6 +78,26 @@ type SMTPConfig struct {
 	UseTLS   bool
 }
 
+type SMSConfig struct {
+	Provider           string
+	RateLimitPerSecond int
+	MaxSegments        int
+	DefaultSenderID    string
+}
+
+type NotifyLKConfigStruct struct {
+	UserID   string
+	APIKey   string
+	SenderID string
+}
+
+type TwilioConfigStruct struct {
+	AccountSID          string
+	AuthToken           string
+	FromNumber          string
+	MessagingServiceSID string
+}
+
 func Load() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
@@ -127,6 +150,20 @@ func Load() (*Config, error) {
 	viper.SetDefault("SMTP_USERNAME", "")
 	viper.SetDefault("SMTP_PASSWORD", "")
 	viper.SetDefault("SMTP_USE_TLS", true)
+
+	viper.SetDefault("SMS_PROVIDER", "router")
+	viper.SetDefault("SMS_RATE_LIMIT_PER_SECOND", 10)
+	viper.SetDefault("SMS_MAX_SEGMENTS", 3)
+	viper.SetDefault("SMS_DEFAULT_SENDER_ID", "Buzz")
+
+	viper.SetDefault("NOTIFYLK_USER_ID", "")
+	viper.SetDefault("NOTIFYLK_API_KEY", "")
+	viper.SetDefault("NOTIFYLK_SENDER_ID", "Buzz")
+
+	viper.SetDefault("TWILIO_ACCOUNT_SID", "")
+	viper.SetDefault("TWILIO_AUTH_TOKEN", "")
+	viper.SetDefault("TWILIO_FROM_NUMBER", "")
+	viper.SetDefault("TWILIO_MESSAGING_SERVICE_SID", "")
 
 	readTimeout, err := time.ParseDuration(viper.GetString("SERVER_READ_TIMEOUT"))
 	if err != nil {
@@ -193,6 +230,23 @@ func Load() (*Config, error) {
 			Username: viper.GetString("SMTP_USERNAME"),
 			Password: viper.GetString("SMTP_PASSWORD"),
 			UseTLS:   viper.GetBool("SMTP_USE_TLS"),
+		},
+		SMS: SMSConfig{
+			Provider:           viper.GetString("SMS_PROVIDER"),
+			RateLimitPerSecond: viper.GetInt("SMS_RATE_LIMIT_PER_SECOND"),
+			MaxSegments:        viper.GetInt("SMS_MAX_SEGMENTS"),
+			DefaultSenderID:    viper.GetString("SMS_DEFAULT_SENDER_ID"),
+		},
+		NotifyLK: NotifyLKConfigStruct{
+			UserID:   viper.GetString("NOTIFYLK_USER_ID"),
+			APIKey:   viper.GetString("NOTIFYLK_API_KEY"),
+			SenderID: viper.GetString("NOTIFYLK_SENDER_ID"),
+		},
+		Twilio: TwilioConfigStruct{
+			AccountSID:          viper.GetString("TWILIO_ACCOUNT_SID"),
+			AuthToken:           viper.GetString("TWILIO_AUTH_TOKEN"),
+			FromNumber:          viper.GetString("TWILIO_FROM_NUMBER"),
+			MessagingServiceSID: viper.GetString("TWILIO_MESSAGING_SERVICE_SID"),
 		},
 	}
 
