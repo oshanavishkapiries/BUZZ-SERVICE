@@ -6,6 +6,7 @@ import (
 
 	"github.com/elight/buzz-service/internal/config"
 	"github.com/elight/buzz-service/internal/provider/email"
+	"github.com/elight/buzz-service/internal/provider/push"
 	"github.com/elight/buzz-service/internal/provider/sms"
 )
 
@@ -99,4 +100,19 @@ func NewSMSProvider(cfg *config.Config) (sms.SMSProvider, error) {
 	default:
 		return nil, fmt.Errorf("unknown SMS provider: %s", cfg.SMS.Provider)
 	}
+}
+
+// NewPushProvider creates a push provider based on configuration
+func NewPushProvider(ctx context.Context, cfg *config.Config) (*push.FCMProvider, error) {
+	fcmCfg := push.FCMConfig{
+		CredentialsFile: cfg.Push.CredentialsFile,
+		ProjectID:       cfg.Push.ProjectID,
+	}
+
+	provider, err := push.NewFCMProvider(ctx, fcmCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create FCM provider: %w", err)
+	}
+
+	return provider, nil
 }

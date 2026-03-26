@@ -19,6 +19,7 @@ type Config struct {
 	SMS      SMSConfig
 	NotifyLK NotifyLKConfigStruct
 	Twilio   TwilioConfigStruct
+	Push     PushConfig
 }
 
 type ServerConfig struct {
@@ -98,6 +99,14 @@ type TwilioConfigStruct struct {
 	MessagingServiceSID string
 }
 
+type PushConfig struct {
+	CredentialsFile string
+	ProjectID       string
+	BatchSize       int
+	DefaultIcon     string
+	DefaultBadge    string
+}
+
 func Load() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
@@ -164,6 +173,12 @@ func Load() (*Config, error) {
 	viper.SetDefault("TWILIO_AUTH_TOKEN", "")
 	viper.SetDefault("TWILIO_FROM_NUMBER", "")
 	viper.SetDefault("TWILIO_MESSAGING_SERVICE_SID", "")
+
+	viper.SetDefault("FCM_CREDENTIALS_FILE", "firebase-adminsdk.json")
+	viper.SetDefault("FCM_PROJECT_ID", "")
+	viper.SetDefault("PUSH_BATCH_SIZE", 500)
+	viper.SetDefault("PUSH_DEFAULT_ICON", "")
+	viper.SetDefault("PUSH_DEFAULT_BADGE", "")
 
 	readTimeout, err := time.ParseDuration(viper.GetString("SERVER_READ_TIMEOUT"))
 	if err != nil {
@@ -247,6 +262,13 @@ func Load() (*Config, error) {
 			AuthToken:           viper.GetString("TWILIO_AUTH_TOKEN"),
 			FromNumber:          viper.GetString("TWILIO_FROM_NUMBER"),
 			MessagingServiceSID: viper.GetString("TWILIO_MESSAGING_SERVICE_SID"),
+		},
+		Push: PushConfig{
+			CredentialsFile: viper.GetString("FCM_CREDENTIALS_FILE"),
+			ProjectID:       viper.GetString("FCM_PROJECT_ID"),
+			BatchSize:       viper.GetInt("PUSH_BATCH_SIZE"),
+			DefaultIcon:     viper.GetString("PUSH_DEFAULT_ICON"),
+			DefaultBadge:    viper.GetString("PUSH_DEFAULT_BADGE"),
 		},
 	}
 

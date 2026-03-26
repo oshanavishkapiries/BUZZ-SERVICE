@@ -55,6 +55,13 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	templates.Get("/:name", RequireScope("template:read"), templateHandler.GetTemplate)
 	templates.Patch("/:name", RequireScope("template:write"), templateHandler.UpdateTemplate)
 
+	// Devices (push notification device management)
+	deviceHandler := NewDeviceHandler(db)
+	devices := v1.Group("/devices")
+	devices.Post("/register", RequireScope("device:write"), deviceHandler.RegisterDevice)
+	devices.Get("/", RequireScope("device:read"), deviceHandler.ListUserDevices)
+	devices.Delete("/:token", RequireScope("device:write"), deviceHandler.UnregisterDevice)
+
 	// Monitoring
 	redisAddr := fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port)
 	inspector := queue.NewInspector(redisAddr, cfg.Redis.Password)
