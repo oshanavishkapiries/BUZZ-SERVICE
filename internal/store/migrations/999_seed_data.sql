@@ -44,30 +44,116 @@ SELECT gen_random_uuid(), 'Promotional SMS', 'Promotional SMS for marketing camp
 WHERE NOT EXISTS (SELECT 1 FROM templates WHERE name = 'Promotional SMS');
 
 -- Seed API Keys (for testing purposes)
+-- These keys are for development and testing only. Never use in production.
+
 -- Test Key: buzz_test_key_123
 -- SHA256 Hash: be1821aec251a0c3191119b5d182f931442ba3dc2be5372234d35ebe9b550224
+-- Full Development Access with monitoring
 INSERT INTO api_keys (
     id, name, description, key_hash, key_prefix, environment, scopes,
     rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
     is_active, created_at, updated_at
 )
-SELECT gen_random_uuid(), 'Test API Key - Development', 'API key for development and testing',
+SELECT gen_random_uuid(), 'Test API Key - Development', 'API key for development and testing with full access',
     'be1821aec251a0c3191119b5d182f931442ba3dc2be5372234d35ebe9b550224', 'buzz_tes', 'test',
-    ARRAY['notification:send', 'notification:read', 'template:read', 'template:write', 'batch:write', 'batch:read'],
+    ARRAY[
+        'notification:send',
+        'notification:read',
+        'notification:update',
+        'notification:delete',
+        'template:read',
+        'template:write',
+        'batch:write',
+        'batch:read',
+        'batch:update',
+        'datasource:read',
+        'datasource:write',
+        'monitoring:read',
+        'queue:inspect',
+        'device:register',
+        'device:list',
+        'device:delete',
+        'inbox:read',
+        'inbox:update'
+    ],
     1000, 10000, 100000, true, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = 'buzz_tes');
 
+-- Production API Key: buzz_live_prod_key
+-- SHA256 Hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+-- Limited Production Access
 INSERT INTO api_keys (
     id, name, description, key_hash, key_prefix, environment, scopes,
     rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
     is_active, created_at, updated_at
 )
-SELECT gen_random_uuid(), 'Production API Key - Full Access', 'Full access API key for production',
+SELECT gen_random_uuid(), 'Production API Key - Full Access', 'Full access API key for production environment',
     'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'buzz_liv', 'production',
     ARRAY['*'],
     100, 1000, 10000, true, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = 'buzz_liv');
 
+-- Read-Only Monitoring Key: buzz_monitor_read
+-- SHA256 Hash: 5e884898da28047151d0e56f8dc629302f592f40d33e40b79f1abe66b87d4ad4
+-- Monitoring and Statistics Only
+INSERT INTO api_keys (
+    id, name, description, key_hash, key_prefix, environment, scopes,
+    rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
+    is_active, created_at, updated_at
+)
+SELECT gen_random_uuid(), 'Monitoring API Key - Read Only', 'Read-only access for monitoring and statistics',
+    '5e884898da28047151d0e56f8dc629302f592f40d33e40b79f1abe66b87d4ad4', 'buzz_mon', 'production',
+    ARRAY[
+        'notification:read',
+        'batch:read',
+        'monitoring:read',
+        'queue:inspect',
+        'device:list'
+    ],
+    500, 5000, 50000, true, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = 'buzz_mon');
+
+-- Sender-Only Key: buzz_sender_limited
+-- SHA256 Hash: 6512bd43d9caa6e02c990b0a82652dca2b16e0e8f96e0d7ef3e17de8e6a9e5b
+-- Limited to Sending Notifications Only
+INSERT INTO api_keys (
+    id, name, description, key_hash, key_prefix, environment, scopes,
+    rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
+    is_active, created_at, updated_at
+)
+SELECT gen_random_uuid(), 'Sender API Key - Limited', 'Limited access for sending notifications only',
+    '6512bd43d9caa6e02c990b0a82652dca2b16e0e8f96e0d7ef3e17de8e6a9e5b', 'buzz_snd', 'production',
+    ARRAY[
+        'notification:send',
+        'notification:read',
+        'template:read',
+        'device:register'
+    ],
+    2000, 20000, 200000, true, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = 'buzz_snd');
+
 -- Comments
-COMMENT ON TABLE templates IS 'Seed templates contain common notification patterns';
-COMMENT ON TABLE api_keys IS 'Seed API keys are for testing only - regenerate for production';
+COMMENT ON TABLE templates IS 'Seed templates contain common notification patterns for development and testing';
+COMMENT ON TABLE api_keys IS 'Seed API keys are for testing and development only - regenerate and rotate keys for production use';
+
+-- API Key Scopes Reference:
+-- notification:send   - Send individual notifications
+-- notification:read   - Retrieve notification details and history
+-- notification:update - Update notification status/metadata
+-- notification:delete - Delete notifications (hard delete)
+-- template:read       - Read notification templates
+-- template:write      - Create/update notification templates
+-- batch:write         - Create and manage batch operations
+-- batch:read          - Read batch details and progress
+-- batch:update        - Update batch status
+-- datasource:read     - Read data source configurations
+-- datasource:write    - Create/update data sources
+-- monitoring:read     - Access queue statistics and monitoring
+-- queue:inspect       - Inspect queue contents and status
+-- device:register     - Register device tokens for push notifications
+-- device:list         - List devices for a user
+-- device:delete       - Remove device tokens
+-- inbox:read          - Read user inbox entries
+-- inbox:update        - Mark messages as read/archived
+-- *                   - Full access to all operations
+
