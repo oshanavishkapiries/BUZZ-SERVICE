@@ -5,6 +5,7 @@ import (
 
 	"github.com/elight/buzz-service/internal/config"
 	"github.com/elight/buzz-service/internal/queue"
+	"github.com/elight/buzz-service/internal/realtime"
 	"github.com/elight/buzz-service/internal/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -12,7 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
 
-func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Producer, cfg *config.Config) {
+func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Producer, cfg *config.Config, gateway *realtime.Gateway) {
 	// Global middleware
 	app.Use(recover.New())
 	app.Use(requestid.New())
@@ -61,6 +62,17 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	devices.Post("/register", RequireScope("device:write"), deviceHandler.RegisterDevice)
 	devices.Get("/", RequireScope("device:read"), deviceHandler.ListUserDevices)
 	devices.Delete("/:token", RequireScope("device:write"), deviceHandler.UnregisterDevice)
+
+	// Inbox (in-app notifications)
+	inboxHandler := NewInboxHandler(db)
+	inbox := v1.Group("/inbox")
+	inbox.Get("/", inboxHandler.GetInbox)
+	inbox.Patch("/:id/read", inboxHandler.MarkAsRead)
+	inbox.Post("/read-all", inboxHandler.MarkAllAsRead)
+	inbox.Delete("/:id", inboxHandler.DeleteNotification)
+
+	// Real-time notifications (SSE stream)
+	v1.Get("/stream", gateway.HandleSSEConnection)
 
 	// Monitoring
 	redisAddr := fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port)

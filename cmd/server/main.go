@@ -15,9 +15,11 @@ import (
 	"github.com/elight/buzz-service/internal/provider"
 	"github.com/elight/buzz-service/internal/provider/mock"
 	"github.com/elight/buzz-service/internal/queue"
+	"github.com/elight/buzz-service/internal/realtime"
 	"github.com/elight/buzz-service/internal/store"
 	"github.com/elight/buzz-service/pkg/logger"
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -54,6 +56,19 @@ func main() {
 		appLogger.Fatal().Err(err).Msg("Failed to create queue producer")
 	}
 	defer producer.Close()
+
+	// Initialize Redis client for real-time gateway
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: cfg.Redis.Password,
+		DB:       0,
+	})
+	defer redisClient.Close()
+
+	// Initialize SSE gateway
+	gateway := realtime.NewGateway(redisClient, appLogger)
+	gateway.Start()
+	defer gateway.Stop()
 
 	// Initialize providers (mock for now)
 	providers := map[domain.Channel]provider.Provider{
@@ -93,7 +108,7 @@ func main() {
 	})
 
 	// Setup routes
-	api.SetupRoutes(app, db, producer, cfg)
+	api.SetupRoutes(app, db, producer, cfg, gateway)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)

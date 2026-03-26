@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/elight/buzz-service/internal/config"
 	"github.com/elight/buzz-service/internal/provider/email"
+	"github.com/elight/buzz-service/internal/provider/inapp"
 	"github.com/elight/buzz-service/internal/provider/push"
 	"github.com/elight/buzz-service/internal/provider/sms"
+	"github.com/elight/buzz-service/internal/store"
 )
 
 // NewEmailProvider creates an email provider based on configuration
@@ -115,4 +118,9 @@ func NewPushProvider(ctx context.Context, cfg *config.Config) (*push.FCMProvider
 	}
 
 	return provider, nil
+}
+
+// NewInAppProvider creates an in-app notification provider
+func NewInAppProvider(st *store.PostgresStore, redisClient *redis.Client) *inapp.InAppProvider {
+	return inapp.NewInAppProvider(st, redisClient)
 }
