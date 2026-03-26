@@ -74,14 +74,14 @@ func (r *TemplateRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain
 	return template, nil
 }
 
-// GetByName retrieves a template by name
+// GetByName retrieves a template by name (case-insensitive)
 func (r *TemplateRepository) GetByName(ctx context.Context, name string) (*domain.Template, error) {
 	query := `
 		SELECT id, name, description, channels, subject, body, html_body,
 			variables, default_values, config, is_active, created_at, updated_at,
 			created_by, deleted_at
 		FROM templates
-		WHERE name = $1 AND deleted_at IS NULL
+		WHERE LOWER(name) = LOWER($1) AND deleted_at IS NULL
 	`
 
 	template := &domain.Template{}

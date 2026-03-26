@@ -68,6 +68,7 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 			return c.Status(404).JSON(fiber.Map{
 				"error":    "template not found",
 				"template": req.Template,
+				"hint":     "Template names are case-insensitive. Check available templates by querying: SELECT DISTINCT name FROM templates WHERE deleted_at IS NULL;",
 			})
 		}
 
