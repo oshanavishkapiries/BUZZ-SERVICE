@@ -12,6 +12,7 @@ type Config struct {
 	Database DatabaseConfig
 	Redis    RedisConfig
 	Logger   LoggerConfig
+	Queue    QueueConfig
 }
 
 type ServerConfig struct {
@@ -45,6 +46,11 @@ type LoggerConfig struct {
 	Format string
 }
 
+type QueueConfig struct {
+	Concurrency int
+	Queues      map[string]int // queue name -> priority weight
+}
+
 func Load() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
@@ -75,6 +81,13 @@ func Load() (*Config, error) {
 
 	viper.SetDefault("LOG_LEVEL", "info")
 	viper.SetDefault("LOG_FORMAT", "json")
+
+	viper.SetDefault("QUEUE_CONCURRENCY", 10)
+	viper.SetDefault("QUEUE_EMAIL_WEIGHT", 3)
+	viper.SetDefault("QUEUE_SMS_WEIGHT", 3)
+	viper.SetDefault("QUEUE_PUSH_WEIGHT", 2)
+	viper.SetDefault("QUEUE_INAPP_WEIGHT", 2)
+	viper.SetDefault("QUEUE_BATCH_WEIGHT", 1)
 
 	readTimeout, err := time.ParseDuration(viper.GetString("SERVER_READ_TIMEOUT"))
 	if err != nil {
@@ -113,6 +126,16 @@ func Load() (*Config, error) {
 		Logger: LoggerConfig{
 			Level:  viper.GetString("LOG_LEVEL"),
 			Format: viper.GetString("LOG_FORMAT"),
+		},
+		Queue: QueueConfig{
+			Concurrency: viper.GetInt("QUEUE_CONCURRENCY"),
+			Queues: map[string]int{
+				"email":  viper.GetInt("QUEUE_EMAIL_WEIGHT"),
+				"sms":    viper.GetInt("QUEUE_SMS_WEIGHT"),
+				"push":   viper.GetInt("QUEUE_PUSH_WEIGHT"),
+				"in_app": viper.GetInt("QUEUE_INAPP_WEIGHT"),
+				"batch":  viper.GetInt("QUEUE_BATCH_WEIGHT"),
+			},
 		},
 	}
 

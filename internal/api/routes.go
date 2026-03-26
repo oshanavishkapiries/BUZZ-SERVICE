@@ -1,6 +1,10 @@
 package api
 
 import (
+	"fmt"
+
+	"github.com/elight/buzz-service/internal/config"
+	"github.com/elight/buzz-service/internal/queue"
 	"github.com/elight/buzz-service/internal/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -8,7 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
 
-func SetupRoutes(app *fiber.App, db *store.PostgresStore) {
+func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Producer, cfg *config.Config) {
 	// Global middleware
 	app.Use(recover.New())
 	app.Use(requestid.New())
@@ -29,7 +33,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore) {
 	v1.Use(AuthMiddleware(db))
 
 	// Notifications
-	notifHandler := NewNotificationHandler(db)
+	notifHandler := NewNotificationHandler(db, producer)
 	notifications := v1.Group("/notifications")
 	notifications.Post("/", RequireScope("notification:send"), notifHandler.SendNotification)
 	notifications.Get("/", RequireScope("notification:read"), notifHandler.ListNotifications)
@@ -42,6 +46,15 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore) {
 	templates.Get("/", RequireScope("template:read"), templateHandler.ListTemplates)
 	templates.Get("/:name", RequireScope("template:read"), templateHandler.GetTemplate)
 	templates.Patch("/:name", RequireScope("template:write"), templateHandler.UpdateTemplate)
+
+	// Monitoring
+	redisAddr := fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port)
+	inspector := queue.NewInspector(redisAddr, cfg.Redis.Password)
+	monitoringHandler := NewMonitoringHandler(inspector)
+	monitoring := v1.Group("/monitoring")
+	monitoring.Get("/queues", RequireScope("monitoring:read"), monitoringHandler.ListQueues)
+	monitoring.Get("/queues/:queue", RequireScope("monitoring:read"), monitoringHandler.GetQueueStats)
+	monitoring.Get("/stats", RequireScope("monitoring:read"), monitoringHandler.GetAllQueueStats)
 }
 
 func HealthCheck(db *store.PostgresStore) fiber.Handler {

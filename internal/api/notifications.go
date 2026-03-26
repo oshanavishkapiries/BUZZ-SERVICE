@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/elight/buzz-service/internal/domain"
+	"github.com/elight/buzz-service/internal/queue"
 	"github.com/elight/buzz-service/internal/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -13,13 +14,15 @@ import (
 
 // NotificationHandler handles notification-related HTTP requests
 type NotificationHandler struct {
-	store *store.PostgresStore
+	store    *store.PostgresStore
+	producer *queue.Producer
 }
 
 // NewNotificationHandler creates a new notification handler
-func NewNotificationHandler(store *store.PostgresStore) *NotificationHandler {
+func NewNotificationHandler(store *store.PostgresStore, producer *queue.Producer) *NotificationHandler {
 	return &NotificationHandler{
-		store: store,
+		store:    store,
+		producer: producer,
 	}
 }
 
@@ -141,8 +144,11 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: Enqueue for processing (Phase 4 - Queue integration)
-	// For now, notifications are just stored in database with status "queued"
+	// Enqueue for processing (Phase 4 - Queue integration)
+	if err := h.producer.EnqueueNotification(ctx, notification); err != nil {
+		// Log error but don't fail the request - notification is already in DB
+		fmt.Printf("Failed to enqueue notification %s: %v\n", notification.ID, err)
+	}
 
 	return c.Status(202).JSON(fiber.Map{
 		"id":      notification.ID,
