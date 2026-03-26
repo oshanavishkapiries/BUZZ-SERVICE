@@ -3,200 +3,125 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/elight/buzz-service/internal/domain"
 	"github.com/google/uuid"
 )
 
-// DatasourceRepository handles database operations for datasources
-type DatasourceRepository struct {
-	db *sql.DB
-}
-
-// NewDatasourceRepository creates a new datasource repository
-func NewDatasourceRepository(db *sql.DB) *DatasourceRepository {
-	return &DatasourceRepository{db: db}
-}
-
-// Create creates a new datasource
-func (r *DatasourceRepository) Create(ctx context.Context, datasource *domain.Datasource) error {
+// CreateDatasource creates a new datasource record
+func (s *PostgresStore) CreateDatasource(ctx context.Context, ds *domain.Datasource) error {
 	query := `
-		INSERT INTO datasources (
-			id, name, type, config, column_mapping, created_by
-		) VALUES (
-			$1, $2, $3, $4, $5, $6
-		) RETURNING created_at, updated_at
+		INSERT INTO datasources (id, name, base_url, auth_type, auth_config, endpoints, active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
-	datasource.ID = uuid.New()
-
-	err := r.db.QueryRowContext(ctx, query,
-		datasource.ID, datasource.Name, datasource.Type, datasource.Config,
-		datasource.ColumnMapping, datasource.CreatedBy,
-	).Scan(&datasource.CreatedAt, &datasource.UpdatedAt)
-
-	if err != nil {
-		return fmt.Errorf("failed to create datasource: %w", err)
-	}
-
-	return nil
+	_, err := s.db.ExecContext(ctx, query,
+		ds.ID, ds.Name, ds.BaseURL, ds.AuthType,
+		ds.AuthConfig, ds.Endpoints, ds.Active,
+		ds.CreatedAt, ds.UpdatedAt,
+	)
+	return err
 }
 
-// GetByID retrieves a datasource by ID
-func (r *DatasourceRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Datasource, error) {
+// GetDatasourceByName retrieves a datasource by name
+func (s *PostgresStore) GetDatasourceByName(ctx context.Context, name string) (*domain.Datasource, error) {
 	query := `
-		SELECT id, name, type, config, column_mapping, created_at, updated_at,
-			created_by, deleted_at
+		SELECT id, name, base_url, auth_type, auth_config, endpoints, active, created_at, updated_at
 		FROM datasources
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE name = $1
 	`
 
-	datasource := &domain.Datasource{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&datasource.ID, &datasource.Name, &datasource.Type, &datasource.Config,
-		&datasource.ColumnMapping, &datasource.CreatedAt, &datasource.UpdatedAt,
-		&datasource.CreatedBy, &datasource.DeletedAt,
+	var ds domain.Datasource
+	err := s.db.QueryRowContext(ctx, query, name).Scan(
+		&ds.ID, &ds.Name, &ds.BaseURL, &ds.AuthType,
+		&ds.AuthConfig, &ds.Endpoints, &ds.Active,
+		&ds.CreatedAt, &ds.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("datasource not found")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get datasource: %w", err)
+		return nil, domain.ErrDatasourceNotFound
 	}
 
-	return datasource, nil
+	return &ds, err
 }
 
-// GetByName retrieves a datasource by name
-func (r *DatasourceRepository) GetByName(ctx context.Context, name string) (*domain.Datasource, error) {
+// GetDatasourceByID retrieves a datasource by ID
+func (s *PostgresStore) GetDatasourceByID(ctx context.Context, id uuid.UUID) (*domain.Datasource, error) {
 	query := `
-		SELECT id, name, type, config, column_mapping, created_at, updated_at,
-			created_by, deleted_at
+		SELECT id, name, base_url, auth_type, auth_config, endpoints, active, created_at, updated_at
 		FROM datasources
-		WHERE name = $1 AND deleted_at IS NULL
+		WHERE id = $1
 	`
 
-	datasource := &domain.Datasource{}
-	err := r.db.QueryRowContext(ctx, query, name).Scan(
-		&datasource.ID, &datasource.Name, &datasource.Type, &datasource.Config,
-		&datasource.ColumnMapping, &datasource.CreatedAt, &datasource.UpdatedAt,
-		&datasource.CreatedBy, &datasource.DeletedAt,
+	var ds domain.Datasource
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&ds.ID, &ds.Name, &ds.BaseURL, &ds.AuthType,
+		&ds.AuthConfig, &ds.Endpoints, &ds.Active,
+		&ds.CreatedAt, &ds.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("datasource not found")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get datasource: %w", err)
+		return nil, domain.ErrDatasourceNotFound
 	}
 
-	return datasource, nil
+	return &ds, err
 }
 
-// Update updates an existing datasource
-func (r *DatasourceRepository) Update(ctx context.Context, datasource *domain.Datasource) error {
+// ListDatasources lists all active datasources
+func (s *PostgresStore) ListDatasources(ctx context.Context) ([]domain.Datasource, error) {
 	query := `
-		UPDATE datasources SET
-			name = $1, type = $2, config = $3, column_mapping = $4, updated_at = NOW()
-		WHERE id = $5 AND deleted_at IS NULL
-		RETURNING updated_at
-	`
-
-	err := r.db.QueryRowContext(ctx, query,
-		datasource.Name, datasource.Type, datasource.Config, datasource.ColumnMapping,
-		datasource.ID,
-	).Scan(&datasource.UpdatedAt)
-
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("datasource not found")
-	}
-	if err != nil {
-		return fmt.Errorf("failed to update datasource: %w", err)
-	}
-
-	return nil
-}
-
-// List retrieves datasources with optional filters
-func (r *DatasourceRepository) List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*domain.Datasource, error) {
-	query := `
-		SELECT id, name, type, config, column_mapping, created_at, updated_at,
-			created_by, deleted_at
+		SELECT id, name, base_url, auth_type, endpoints, active, created_at, updated_at
 		FROM datasources
-		WHERE deleted_at IS NULL
+		WHERE active = true
+		ORDER BY name
 	`
 
-	args := []interface{}{}
-	argIndex := 1
-
-	// Add filters
-	if dsType, ok := filters["type"].(domain.DatasourceType); ok {
-		query += fmt.Sprintf(" AND type = $%d", argIndex)
-		args = append(args, dsType)
-		argIndex++
-	}
-
-	query += " ORDER BY created_at DESC"
-
-	if limit > 0 {
-		query += fmt.Sprintf(" LIMIT $%d", argIndex)
-		args = append(args, limit)
-		argIndex++
-	}
-	if offset > 0 {
-		query += fmt.Sprintf(" OFFSET $%d", argIndex)
-		args = append(args, offset)
-	}
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list datasources: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
-	datasources := []*domain.Datasource{}
+	var datasources []domain.Datasource
 	for rows.Next() {
-		datasource := &domain.Datasource{}
+		var ds domain.Datasource
 		err := rows.Scan(
-			&datasource.ID, &datasource.Name, &datasource.Type, &datasource.Config,
-			&datasource.ColumnMapping, &datasource.CreatedAt, &datasource.UpdatedAt,
-			&datasource.CreatedBy, &datasource.DeletedAt,
+			&ds.ID, &ds.Name, &ds.BaseURL, &ds.AuthType,
+			&ds.Endpoints, &ds.Active, &ds.CreatedAt, &ds.UpdatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan datasource: %w", err)
+			return nil, err
 		}
-		datasources = append(datasources, datasource)
+		datasources = append(datasources, ds)
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating datasources: %w", err)
-	}
-
-	return datasources, nil
+	return datasources, rows.Err()
 }
 
-// Delete soft deletes a datasource
-func (r *DatasourceRepository) Delete(ctx context.Context, id uuid.UUID) error {
+// UpdateDatasource updates an existing datasource
+func (s *PostgresStore) UpdateDatasource(ctx context.Context, ds *domain.Datasource) error {
 	query := `
-		UPDATE datasources SET
-			deleted_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
+		UPDATE datasources
+		SET name = $2, base_url = $3, auth_type = $4, auth_config = $5, 
+		    endpoints = $6, active = $7, updated_at = $8
+		WHERE id = $1
 	`
 
-	result, err := r.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("failed to delete datasource: %w", err)
-	}
+	_, err := s.db.ExecContext(ctx, query,
+		ds.ID, ds.Name, ds.BaseURL, ds.AuthType,
+		ds.AuthConfig, ds.Endpoints, ds.Active, ds.UpdatedAt,
+	)
+	return err
+}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("datasource not found")
-	}
+// DeleteDatasource soft-deletes a datasource by setting active to false
+func (s *PostgresStore) DeleteDatasource(ctx context.Context, id uuid.UUID) error {
+	query := `
+		UPDATE datasources
+		SET active = false, updated_at = NOW()
+		WHERE id = $1
+	`
 
-	return nil
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
 }

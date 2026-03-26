@@ -51,6 +51,10 @@ const (
 	BatchStatusCompleted  BatchStatus = "completed"
 	BatchStatusFailed     BatchStatus = "failed"
 	BatchStatusCancelled  BatchStatus = "cancelled"
+	// Phase 9 specific statuses
+	BatchStatusFetching   BatchStatus = "fetching"
+	BatchStatusQueued     BatchStatus = "queued"
+	BatchStatusDelivering BatchStatus = "delivering"
 )
 
 // DatasourceType represents the type of external data source
@@ -140,27 +144,26 @@ type Notification struct {
 
 // Batch represents a bulk notification operation
 type Batch struct {
-	ID           uuid.UUID   `json:"id" db:"id"`
-	Name         string      `json:"name" db:"name"`
-	Description  *string     `json:"description,omitempty" db:"description"`
-	Type         string      `json:"type" db:"type"`
-	Channel      Channel     `json:"channel" db:"channel"`
-	TemplateID   *uuid.UUID  `json:"template_id,omitempty" db:"template_id"`
-	DatasourceID *uuid.UUID  `json:"datasource_id,omitempty" db:"datasource_id"`
-	Status       BatchStatus `json:"status" db:"status"`
-	TotalCount   int         `json:"total_count" db:"total_count"`
-	SuccessCount int         `json:"success_count" db:"success_count"`
-	FailedCount  int         `json:"failed_count" db:"failed_count"`
-	PendingCount int         `json:"pending_count" db:"pending_count"`
-	ScheduledAt  *time.Time  `json:"scheduled_at,omitempty" db:"scheduled_at"`
-	StartedAt    *time.Time  `json:"started_at,omitempty" db:"started_at"`
-	CompletedAt  *time.Time  `json:"completed_at,omitempty" db:"completed_at"`
-	ErrorMessage *string     `json:"error_message,omitempty" db:"error_message"`
-	Config       JSONB       `json:"config,omitempty" db:"config"`
-	CreatedAt    time.Time   `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time   `json:"updated_at" db:"updated_at"`
-	CreatedBy    *uuid.UUID  `json:"created_by,omitempty" db:"created_by"`
-	DeletedAt    *time.Time  `json:"deleted_at,omitempty" db:"deleted_at"`
+	ID             uuid.UUID   `json:"id" db:"id"`
+	DatasourceID   *uuid.UUID  `json:"datasource_id,omitempty" db:"datasource_id"`
+	DatasourceName string      `json:"datasource_name" db:"datasource_name"`
+	EndpointName   string      `json:"endpoint_name" db:"endpoint_name"`
+	EndpointParams JSONB       `json:"endpoint_params,omitempty" db:"endpoint_params"`
+	TemplateName   string      `json:"template_name" db:"template_name"`
+	Channel        Channel     `json:"channel" db:"channel"`
+	Priority       Priority    `json:"priority" db:"priority"`
+	TemplateData   JSONB       `json:"template_data,omitempty" db:"template_data"`
+	Status         BatchStatus `json:"status" db:"status"`
+	Total          int         `json:"total" db:"total"`
+	Sent           int         `json:"sent" db:"sent"`
+	Failed         int         `json:"failed" db:"failed"`
+	Skipped        int         `json:"skipped" db:"skipped"`
+	IdempotencyKey string      `json:"idempotency_key,omitempty" db:"idempotency_key"`
+	ErrorMessage   *string     `json:"error_message,omitempty" db:"error_message"`
+	StartedAt      *time.Time  `json:"started_at,omitempty" db:"started_at"`
+	CompletedAt    *time.Time  `json:"completed_at,omitempty" db:"completed_at"`
+	CreatedAt      time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at" db:"updated_at"`
 }
 
 // Template represents a reusable notification template
@@ -205,17 +208,17 @@ type InboxEntry struct {
 	DeletedAt      *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
-// Datasource represents an external data source for bulk sending
+// Datasource represents an external API data source for bulk sending
 type Datasource struct {
-	ID            uuid.UUID      `json:"id" db:"id"`
-	Name          string         `json:"name" db:"name"`
-	Type          DatasourceType `json:"type" db:"type"`
-	Config        JSONB          `json:"config" db:"config"`
-	ColumnMapping JSONB          `json:"column_mapping" db:"column_mapping"`
-	CreatedAt     time.Time      `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at" db:"updated_at"`
-	CreatedBy     *uuid.UUID     `json:"created_by,omitempty" db:"created_by"`
-	DeletedAt     *time.Time     `json:"deleted_at,omitempty" db:"deleted_at"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	BaseURL     string    `json:"base_url" db:"base_url"`
+	AuthType    string    `json:"auth_type" db:"auth_type"` // bearer, basic, api_key
+	AuthConfig  JSONB     `json:"auth_config" db:"auth_config"`
+	Endpoints   JSONB     `json:"endpoints" db:"endpoints"`
+	Active      bool      `json:"active" db:"active"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // APIKey represents an API key for authentication
@@ -263,3 +266,9 @@ type DeviceToken struct {
 	UpdatedAt          time.Time  `json:"updated_at" db:"updated_at"`
 	DeletedAt          *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
+
+// Custom errors for domain
+var (
+	ErrDatasourceNotFound = fmt.Errorf("datasource not found")
+	ErrBatchNotFound      = fmt.Errorf("batch not found")
+)

@@ -153,15 +153,12 @@ func (w *Worker) HandleNotification(ctx context.Context, task *asynq.Task) error
 	}
 
 	// Update batch counters if part of a batch
+	// Note: Phase 9 batch processing is handled separately in the batch processor
+	// Individual notifications from Phase 9 batches can optionally track batch_id for audit
 	if notification.BatchID != nil {
-		batchRepo := store.NewBatchRepository(w.store.DB())
-		// Get current batch to increment success count
-		batch, err := batchRepo.GetByID(ctx, *notification.BatchID)
-		if err == nil {
-			if err := batchRepo.UpdateCounters(ctx, *notification.BatchID, 
-				batch.TotalCount, batch.SuccessCount+1, batch.FailedCount, batch.PendingCount); err != nil {
-				w.logger.Error().Err(err).Msg("Failed to update batch success count")
-			}
+		if err := w.store.IncrementBatchSent(ctx, *notification.BatchID); err != nil {
+			w.logger.Error().Err(err).Msg("Failed to increment batch sent count")
+			// Don't fail the notification delivery if batch update fails
 		}
 	}
 
@@ -187,7 +184,9 @@ func (w *Worker) HandleBatchProcess(ctx context.Context, task *asynq.Task) error
 		Str("batch_id", payload.BatchID).
 		Msg("Processing batch")
 
-	// Implementation in Phase 09
+	// This is a placeholder. The actual batch processing is done by the batch processor
+	// which is invoked separately. The queue worker here would trigger batch processing
+	// if needed, but for Phase 9 the batch processor is responsible.
 	return nil
 }
 

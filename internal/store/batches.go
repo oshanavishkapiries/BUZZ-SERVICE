@@ -3,243 +3,215 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/elight/buzz-service/internal/domain"
 	"github.com/google/uuid"
 )
 
-// BatchRepository handles database operations for batches
-type BatchRepository struct {
-	db *sql.DB
-}
-
-// NewBatchRepository creates a new batch repository
-func NewBatchRepository(db *sql.DB) *BatchRepository {
-	return &BatchRepository{db: db}
-}
-
-// Create creates a new batch
-func (r *BatchRepository) Create(ctx context.Context, batch *domain.Batch) error {
+// CreateBatch creates a new batch record
+func (s *PostgresStore) CreateBatch(ctx context.Context, batch *domain.Batch) error {
 	query := `
 		INSERT INTO batches (
-			id, name, description, type, channel, template_id, datasource_id,
-			status, total_count, success_count, failed_count, pending_count,
-			scheduled_at, config, created_by
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-		) RETURNING created_at, updated_at
+			id, datasource_id, datasource_name, endpoint_name, endpoint_params,
+			template_name, channel, priority, template_data,
+			status, idempotency_key, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 
-	batch.ID = uuid.New()
-
-	err := r.db.QueryRowContext(ctx, query,
-		batch.ID, batch.Name, batch.Description, batch.Type, batch.Channel,
-		batch.TemplateID, batch.DatasourceID, batch.Status, batch.TotalCount,
-		batch.SuccessCount, batch.FailedCount, batch.PendingCount, batch.ScheduledAt,
-		batch.Config, batch.CreatedBy,
-	).Scan(&batch.CreatedAt, &batch.UpdatedAt)
-
-	if err != nil {
-		return fmt.Errorf("failed to create batch: %w", err)
-	}
-
-	return nil
+	_, err := s.db.ExecContext(ctx, query,
+		batch.ID, batch.DatasourceID, batch.DatasourceName,
+		batch.EndpointName, batch.EndpointParams,
+		batch.TemplateName, batch.Channel, batch.Priority,
+		batch.TemplateData, batch.Status, batch.IdempotencyKey,
+		batch.CreatedAt, batch.UpdatedAt,
+	)
+	return err
 }
 
-// GetByID retrieves a batch by ID
-func (r *BatchRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Batch, error) {
+// GetBatch retrieves a batch by ID
+func (s *PostgresStore) GetBatch(ctx context.Context, id uuid.UUID) (*domain.Batch, error) {
 	query := `
-		SELECT id, name, description, type, channel, template_id, datasource_id,
-			status, total_count, success_count, failed_count, pending_count,
-			scheduled_at, started_at, completed_at, error_message, config,
-			created_at, updated_at, created_by, deleted_at
+		SELECT id, datasource_id, datasource_name, endpoint_name, endpoint_params,
+		       template_name, channel, priority, template_data,
+		       status, total, sent, failed, skipped,
+		       idempotency_key, error_message,
+		       started_at, completed_at, created_at, updated_at
 		FROM batches
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE id = $1
 	`
 
-	batch := &domain.Batch{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&batch.ID, &batch.Name, &batch.Description, &batch.Type, &batch.Channel,
-		&batch.TemplateID, &batch.DatasourceID, &batch.Status, &batch.TotalCount,
-		&batch.SuccessCount, &batch.FailedCount, &batch.PendingCount, &batch.ScheduledAt,
-		&batch.StartedAt, &batch.CompletedAt, &batch.ErrorMessage, &batch.Config,
-		&batch.CreatedAt, &batch.UpdatedAt, &batch.CreatedBy, &batch.DeletedAt,
+	var batch domain.Batch
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&batch.ID, &batch.DatasourceID, &batch.DatasourceName,
+		&batch.EndpointName, &batch.EndpointParams,
+		&batch.TemplateName, &batch.Channel, &batch.Priority,
+		&batch.TemplateData, &batch.Status,
+		&batch.Total, &batch.Sent, &batch.Failed, &batch.Skipped,
+		&batch.IdempotencyKey, &batch.ErrorMessage,
+		&batch.StartedAt, &batch.CompletedAt,
+		&batch.CreatedAt, &batch.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("batch not found")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get batch: %w", err)
+		return nil, domain.ErrBatchNotFound
 	}
 
-	return batch, nil
+	return &batch, err
 }
 
-// Update updates an existing batch
-func (r *BatchRepository) Update(ctx context.Context, batch *domain.Batch) error {
+// GetBatchByIdempotencyKey retrieves a batch by idempotency key
+func (s *PostgresStore) GetBatchByIdempotencyKey(ctx context.Context, key string) (*domain.Batch, error) {
 	query := `
-		UPDATE batches SET
-			status = $1, total_count = $2, success_count = $3, failed_count = $4,
-			pending_count = $5, started_at = $6, completed_at = $7, error_message = $8,
-			config = $9, updated_at = NOW()
-		WHERE id = $10 AND deleted_at IS NULL
-		RETURNING updated_at
+		SELECT id, datasource_id, datasource_name, endpoint_name, endpoint_params,
+		       template_name, channel, priority, template_data,
+		       status, total, sent, failed, skipped,
+		       idempotency_key, error_message,
+		       started_at, completed_at, created_at, updated_at
+		FROM batches
+		WHERE idempotency_key = $1
+		LIMIT 1
 	`
 
-	err := r.db.QueryRowContext(ctx, query,
-		batch.Status, batch.TotalCount, batch.SuccessCount, batch.FailedCount,
-		batch.PendingCount, batch.StartedAt, batch.CompletedAt, batch.ErrorMessage,
-		batch.Config, batch.ID,
-	).Scan(&batch.UpdatedAt)
+	var batch domain.Batch
+	err := s.db.QueryRowContext(ctx, query, key).Scan(
+		&batch.ID, &batch.DatasourceID, &batch.DatasourceName,
+		&batch.EndpointName, &batch.EndpointParams,
+		&batch.TemplateName, &batch.Channel, &batch.Priority,
+		&batch.TemplateData, &batch.Status,
+		&batch.Total, &batch.Sent, &batch.Failed, &batch.Skipped,
+		&batch.IdempotencyKey, &batch.ErrorMessage,
+		&batch.StartedAt, &batch.CompletedAt,
+		&batch.CreatedAt, &batch.UpdatedAt,
+	)
 
 	if err == sql.ErrNoRows {
-		return fmt.Errorf("batch not found")
-	}
-	if err != nil {
-		return fmt.Errorf("failed to update batch: %w", err)
+		return nil, domain.ErrBatchNotFound
 	}
 
-	return nil
+	return &batch, err
 }
 
-// UpdateStatus updates only the status of a batch
-func (r *BatchRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.BatchStatus) error {
-	query := `
-		UPDATE batches SET
-			status = $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL
-	`
-
-	result, err := r.db.ExecContext(ctx, query, status, id)
-	if err != nil {
-		return fmt.Errorf("failed to update batch status: %w", err)
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("batch not found")
-	}
-
-	return nil
+// UpdateBatchStatus updates the status of a batch
+func (s *PostgresStore) UpdateBatchStatus(ctx context.Context, id uuid.UUID, status domain.BatchStatus) error {
+	query := "UPDATE batches SET status = $2, updated_at = NOW() WHERE id = $1"
+	_, err := s.db.ExecContext(ctx, query, id, status)
+	return err
 }
 
-// UpdateCounters updates the counters for a batch
-func (r *BatchRepository) UpdateCounters(ctx context.Context, id uuid.UUID, totalCount, successCount, failedCount, pendingCount int) error {
-	query := `
-		UPDATE batches SET
-			total_count = $1, success_count = $2, failed_count = $3, pending_count = $4,
-			updated_at = NOW()
-		WHERE id = $5 AND deleted_at IS NULL
-	`
-
-	result, err := r.db.ExecContext(ctx, query, totalCount, successCount, failedCount, pendingCount, id)
-	if err != nil {
-		return fmt.Errorf("failed to update batch counters: %w", err)
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("batch not found")
-	}
-
-	return nil
+// UpdateBatchTotal updates the total recipient count
+func (s *PostgresStore) UpdateBatchTotal(ctx context.Context, id uuid.UUID, total int) error {
+	query := "UPDATE batches SET total = $2, updated_at = NOW() WHERE id = $1"
+	_, err := s.db.ExecContext(ctx, query, id, total)
+	return err
 }
 
-// List retrieves batches with optional filters
-func (r *BatchRepository) List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*domain.Batch, error) {
-	query := `
-		SELECT id, name, description, type, channel, template_id, datasource_id,
-			status, total_count, success_count, failed_count, pending_count,
-			scheduled_at, started_at, completed_at, error_message, config,
-			created_at, updated_at, created_by, deleted_at
-		FROM batches
-		WHERE deleted_at IS NULL
-	`
+// UpdateBatchError updates error message for a batch
+func (s *PostgresStore) UpdateBatchError(ctx context.Context, id uuid.UUID, errMsg string) error {
+	query := "UPDATE batches SET error_message = $2, status = $3, updated_at = NOW() WHERE id = $1"
+	_, err := s.db.ExecContext(ctx, query, id, errMsg, domain.BatchStatusFailed)
+	return err
+}
 
-	args := []interface{}{}
-	argIndex := 1
+// IncrementBatchSent increments the sent count
+func (s *PostgresStore) IncrementBatchSent(ctx context.Context, id uuid.UUID) error {
+	query := "UPDATE batches SET sent = sent + 1, updated_at = NOW() WHERE id = $1"
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
 
-	// Add filters
-	if status, ok := filters["status"].(domain.BatchStatus); ok {
-		query += fmt.Sprintf(" AND status = $%d", argIndex)
-		args = append(args, status)
-		argIndex++
+// IncrementBatchFailed increments the failed count
+func (s *PostgresStore) IncrementBatchFailed(ctx context.Context, id uuid.UUID) error {
+	query := "UPDATE batches SET failed = failed + 1, updated_at = NOW() WHERE id = $1"
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
+
+// IncrementBatchSkipped increments the skipped count
+func (s *PostgresStore) IncrementBatchSkipped(ctx context.Context, id uuid.UUID) error {
+	query := "UPDATE batches SET skipped = skipped + 1, updated_at = NOW() WHERE id = $1"
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
+
+// ListBatches lists batches with optional status filter and pagination
+func (s *PostgresStore) ListBatches(ctx context.Context, status string, limit, offset int) ([]domain.Batch, int, error) {
+	// Get total count
+	countQuery := "SELECT COUNT(*) FROM batches"
+	var total int
+	if status != "" {
+		if err := s.db.QueryRowContext(ctx, countQuery+" WHERE status = $1", status).Scan(&total); err != nil {
+			return nil, 0, err
+		}
+	} else {
+		if err := s.db.QueryRowContext(ctx, countQuery).Scan(&total); err != nil {
+			return nil, 0, err
+		}
 	}
-	if channel, ok := filters["channel"].(domain.Channel); ok {
-		query += fmt.Sprintf(" AND channel = $%d", argIndex)
-		args = append(args, channel)
-		argIndex++
+
+	// Get batches
+	query := `SELECT id, datasource_id, datasource_name, endpoint_name, endpoint_params, 
+	         template_name, channel, priority, template_data, status, total, sent, failed, skipped, 
+	         idempotency_key, error_message, started_at, completed_at, created_at, updated_at 
+	  FROM batches`
+
+	if status != "" {
+		query += " WHERE status = $1"
 	}
 
 	query += " ORDER BY created_at DESC"
 
-	if limit > 0 {
-		query += fmt.Sprintf(" LIMIT $%d", argIndex)
-		args = append(args, limit)
-		argIndex++
-	}
-	if offset > 0 {
-		query += fmt.Sprintf(" OFFSET $%d", argIndex)
-		args = append(args, offset)
+	if limit > 0 && status != "" {
+		query += " LIMIT $2"
+		if offset > 0 {
+			query += " OFFSET $3"
+		}
+	} else if limit > 0 {
+		query += " LIMIT $1"
+		if offset > 0 {
+			query += " OFFSET $2"
+		}
 	}
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	var rows *sql.Rows
+	var err error
+
+	if status != "" && limit > 0 && offset > 0 {
+		rows, err = s.db.QueryContext(ctx, query, status, limit, offset)
+	} else if status != "" && limit > 0 {
+		rows, err = s.db.QueryContext(ctx, query, status, limit)
+	} else if limit > 0 && offset > 0 {
+		rows, err = s.db.QueryContext(ctx, query, limit, offset)
+	} else if status != "" {
+		rows, err = s.db.QueryContext(ctx, query, status)
+	} else if limit > 0 {
+		rows, err = s.db.QueryContext(ctx, query, limit)
+	} else {
+		rows, err = s.db.QueryContext(ctx, query)
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to list batches: %w", err)
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	batches := []*domain.Batch{}
+	batches := []domain.Batch{}
 	for rows.Next() {
-		batch := &domain.Batch{}
+		var b domain.Batch
 		err := rows.Scan(
-			&batch.ID, &batch.Name, &batch.Description, &batch.Type, &batch.Channel,
-			&batch.TemplateID, &batch.DatasourceID, &batch.Status, &batch.TotalCount,
-			&batch.SuccessCount, &batch.FailedCount, &batch.PendingCount, &batch.ScheduledAt,
-			&batch.StartedAt, &batch.CompletedAt, &batch.ErrorMessage, &batch.Config,
-			&batch.CreatedAt, &batch.UpdatedAt, &batch.CreatedBy, &batch.DeletedAt,
+			&b.ID, &b.DatasourceID, &b.DatasourceName,
+			&b.EndpointName, &b.EndpointParams,
+			&b.TemplateName, &b.Channel, &b.Priority,
+			&b.TemplateData, &b.Status,
+			&b.Total, &b.Sent, &b.Failed, &b.Skipped,
+			&b.IdempotencyKey, &b.ErrorMessage,
+			&b.StartedAt, &b.CompletedAt,
+			&b.CreatedAt, &b.UpdatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan batch: %w", err)
+			return nil, 0, err
 		}
-		batches = append(batches, batch)
+		batches = append(batches, b)
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating batches: %w", err)
-	}
-
-	return batches, nil
-}
-
-// Delete soft deletes a batch
-func (r *BatchRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `
-		UPDATE batches SET
-			deleted_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
-	`
-
-	result, err := r.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("failed to delete batch: %w", err)
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("batch not found")
-	}
-
-	return nil
+	return batches, total, rows.Err()
 }

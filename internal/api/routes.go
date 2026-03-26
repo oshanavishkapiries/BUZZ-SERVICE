@@ -74,6 +74,13 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	// Real-time notifications (SSE stream)
 	v1.Get("/stream", gateway.HandleSSEConnection)
 
+	// Batch notifications
+	batchHandler := NewBatchHandler(db, producer)
+	batches := v1.Group("/batches")
+	batches.Post("/send", RequireScope("batch:send"), batchHandler.SendBulk)
+	batches.Get("/:id", RequireScope("batch:read"), batchHandler.GetBatchStatus)
+	batches.Get("/", RequireScope("batch:read"), batchHandler.ListBatches)
+
 	// Monitoring
 	redisAddr := fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port)
 	inspector := queue.NewInspector(redisAddr, cfg.Redis.Password)
