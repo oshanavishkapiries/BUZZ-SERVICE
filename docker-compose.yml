@@ -35,7 +35,7 @@ services:
     build: .
     container_name: buzz-service
     ports:
-      - "8080:8080"
+      - "5001:5001"
     depends_on:
       postgres:
         condition: service_healthy
