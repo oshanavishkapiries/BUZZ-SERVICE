@@ -26,7 +26,19 @@ func NewNotificationHandler(store *store.PostgresStore, producer *queue.Producer
 	}
 }
 
-// SendNotification handles POST /api/v1/notifications
+// SendNotification godoc
+// @Summary      Send a notification
+// @Description  Queue a notification for delivery via the specified channel (email, sms, push, in_app)
+// @Tags         notifications
+// @Accept       json
+// @Produce      json
+// @Param        body  body      SendNotificationRequest  true  "Notification payload"
+// @Success      202   {object}  map[string]interface{}   "Notification queued"
+// @Failure      400   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse            "Template not found"
+// @Failure      500   {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/notifications [post]
 func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 	var req SendNotificationRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -158,7 +170,17 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 	})
 }
 
-// GetNotification handles GET /api/v1/notifications/:id
+// GetNotification godoc
+// @Summary      Get a notification
+// @Description  Retrieve a single notification by its UUID
+// @Tags         notifications
+// @Produce      json
+// @Param        id   path      string  true  "Notification UUID"
+// @Success      200  {object}  domain.Notification
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/notifications/{id} [get]
 func (h *NotificationHandler) GetNotification(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
@@ -179,7 +201,21 @@ func (h *NotificationHandler) GetNotification(c *fiber.Ctx) error {
 	return c.JSON(notification)
 }
 
-// ListNotifications handles GET /api/v1/notifications
+// ListNotifications godoc
+// @Summary      List notifications
+// @Description  Retrieve a paginated list of notifications with optional filters
+// @Tags         notifications
+// @Produce      json
+// @Param        status        query     string  false  "Filter by status (queued, sent, delivered, failed)"
+// @Param        channel       query     string  false  "Filter by channel (email, sms, push, in_app)"
+// @Param        recipient_id  query     string  false  "Filter by recipient ID"
+// @Param        limit         query     int     false  "Page size 1-100 (default 20)"
+// @Param        offset        query     int     false  "Page offset (default 0)"
+// @Success      200           {object}  map[string]interface{}
+// @Failure      400           {object}  ErrorResponse
+// @Failure      500           {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/notifications [get]
 func (h *NotificationHandler) ListNotifications(c *fiber.Ctx) error {
 	// Parse query parameters
 	status := c.Query("status")

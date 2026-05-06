@@ -19,7 +19,18 @@ func NewTemplateHandler(store *store.PostgresStore) *TemplateHandler {
 	}
 }
 
-// CreateTemplate handles POST /api/v1/templates
+// CreateTemplate godoc
+// @Summary      Create a template
+// @Description  Create a reusable notification template with optional variable placeholders
+// @Tags         templates
+// @Accept       json
+// @Produce      json
+// @Param        body  body      CreateTemplateRequest  true  "Template definition"
+// @Success      201   {object}  domain.Template
+// @Failure      400   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/templates [post]
 func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 	var req CreateTemplateRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -70,7 +81,16 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 	return c.Status(201).JSON(template)
 }
 
-// GetTemplate handles GET /api/v1/templates/:name
+// GetTemplate godoc
+// @Summary      Get a template
+// @Description  Retrieve a template by name
+// @Tags         templates
+// @Produce      json
+// @Param        name  path      string  true  "Template name"
+// @Success      200   {object}  domain.Template
+// @Failure      404   {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/templates/{name} [get]
 func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
 	name := c.Params("name")
 
@@ -85,7 +105,19 @@ func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
 	return c.JSON(template)
 }
 
-// ListTemplates handles GET /api/v1/templates
+// ListTemplates godoc
+// @Summary      List templates
+// @Description  Retrieve a paginated list of notification templates with optional filters
+// @Tags         templates
+// @Produce      json
+// @Param        channel  query     string  false  "Filter by channel (email, sms, push, in_app)"
+// @Param        active   query     bool    false  "Filter by active status (default true)"
+// @Param        limit    query     int     false  "Page size (default 50)"
+// @Param        offset   query     int     false  "Page offset (default 0)"
+// @Success      200      {object}  map[string]interface{}
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/templates [get]
 func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
 	// Parse query parameters
 	channel := c.Query("channel")
@@ -118,7 +150,20 @@ func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
 	})
 }
 
-// UpdateTemplate handles PATCH /api/v1/templates/:name
+// UpdateTemplate godoc
+// @Summary      Update a template
+// @Description  Partially update an existing template's subject, body, metadata, or active status
+// @Tags         templates
+// @Accept       json
+// @Produce      json
+// @Param        name  path      string                 true  "Template name"
+// @Param        body  body      UpdateTemplateRequest  true  "Fields to update"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/templates/{name} [patch]
 func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	name := c.Params("name")
 

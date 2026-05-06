@@ -18,7 +18,18 @@ func NewInboxHandler(st *store.PostgresStore) *InboxHandler {
 	return &InboxHandler{st: st}
 }
 
-// GetInbox handles GET /api/v1/inbox
+// GetInbox godoc
+// @Summary      Get inbox
+// @Description  Retrieve the authenticated user's in-app notification inbox
+// @Tags         inbox
+// @Produce      json
+// @Param        unread  query     bool  false  "Return only unread notifications (default false)"
+// @Param        limit   query     int   false  "Page size (default 20)"
+// @Param        offset  query     int   false  "Page offset (default 0)"
+// @Success      200     {object}  map[string]interface{}
+// @Failure      500     {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/inbox [get]
 func (h *InboxHandler) GetInbox(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
@@ -59,7 +70,17 @@ func (h *InboxHandler) GetInbox(c *fiber.Ctx) error {
 	})
 }
 
-// MarkAsRead handles PATCH /api/v1/inbox/:id/read
+// MarkAsRead godoc
+// @Summary      Mark as read
+// @Description  Mark a single inbox notification as read
+// @Tags         inbox
+// @Produce      json
+// @Param        id   path      string  true  "Inbox entry UUID"
+// @Success      200  {object}  MessageResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/inbox/{id}/read [patch]
 func (h *InboxHandler) MarkAsRead(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
@@ -87,7 +108,15 @@ func (h *InboxHandler) MarkAsRead(c *fiber.Ctx) error {
 	})
 }
 
-// MarkAllAsRead handles POST /api/v1/inbox/read-all
+// MarkAllAsRead godoc
+// @Summary      Mark all as read
+// @Description  Mark all inbox notifications as read for the authenticated user
+// @Tags         inbox
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/inbox/read-all [post]
 func (h *InboxHandler) MarkAllAsRead(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
@@ -109,7 +138,17 @@ func (h *InboxHandler) MarkAllAsRead(c *fiber.Ctx) error {
 	})
 }
 
-// DeleteNotification handles DELETE /api/v1/inbox/:id
+// DeleteNotification godoc
+// @Summary      Delete inbox notification
+// @Description  Permanently delete a notification from the authenticated user's inbox
+// @Tags         inbox
+// @Produce      json
+// @Param        id   path      string  true  "Inbox entry UUID"
+// @Success      200  {object}  MessageResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/inbox/{id} [delete]
 func (h *InboxHandler) DeleteNotification(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	if userID == "" {

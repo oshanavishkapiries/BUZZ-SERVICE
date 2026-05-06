@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	swagger "github.com/gofiber/swagger"
 )
 
 func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Producer, cfg *config.Config, gateway *realtime.Gateway) {
@@ -26,6 +27,9 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 
 	// Public health check
 	app.Get("/health", HealthCheck(db))
+
+	// Swagger UI (public documentation)
+	app.Get("/swagger/*", swagger.New())
 
 	// Webhook routes (public, no auth required)
 	webhookHandler := NewWebhookHandler(db)
@@ -91,6 +95,14 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	monitoring.Get("/stats", RequireScope("monitoring:read"), monitoringHandler.GetAllQueueStats)
 }
 
+// HealthCheck godoc
+// @Summary      Health check
+// @Description  Returns service health status including database connectivity
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "Service is healthy"
+// @Failure      503  {object}  map[string]interface{}  "Service is unhealthy"
+// @Router       /health [get]
 func HealthCheck(db *store.PostgresStore) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()

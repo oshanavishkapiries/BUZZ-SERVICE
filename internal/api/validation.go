@@ -159,8 +159,38 @@ func (r *CreateTemplateRequest) Validate() error {
 
 // UpdateTemplateRequest represents the request body for updating a template
 type UpdateTemplateRequest struct {
-	Subject  *string                 `json:"subject,omitempty"`
-	Body     *string                 `json:"body,omitempty"`
-	Metadata map[string]interface{}  `json:"metadata,omitempty"`
-	Active   *bool                   `json:"active,omitempty"`
+	Subject  *string                `json:"subject,omitempty"`
+	Body     *string                `json:"body,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Active   *bool                  `json:"active,omitempty"`
+}
+
+// RegisterDeviceRequest represents the request body for registering a device
+type RegisterDeviceRequest struct {
+	UserID   string `json:"user_id"  example:"user-123"`
+	Token    string `json:"token"    example:"fcm-token-abc123"`
+	Platform string `json:"platform" example:"android" enums:"android,ios,web"`
+}
+
+// SendBulkRequest represents the request body for sending a bulk notification
+type SendBulkRequest struct {
+	DatasourceName string                 `json:"datasource_name"  example:"crm"`
+	EndpointName   string                 `json:"endpoint_name"    example:"active_users"`
+	EndpointParams map[string]interface{} `json:"endpoint_params,omitempty"`
+	TemplateName   string                 `json:"template_name"    example:"welcome_email"`
+	TemplateData   map[string]interface{} `json:"template_data,omitempty"`
+	Channel        domain.Channel         `json:"channel"          example:"email"`
+	Priority       domain.Priority        `json:"priority,omitempty" example:"normal"`
+	IdempotencyKey string                 `json:"idempotency_key,omitempty"`
+}
+
+// ErrorResponse is the standard error response body
+type ErrorResponse struct {
+	Error   string `json:"error"             example:"validation failed"`
+	Details string `json:"details,omitempty" example:"'to' field is required"`
+}
+
+// MessageResponse is a generic success message response
+type MessageResponse struct {
+	Message string `json:"message" example:"operation completed successfully"`
 }

@@ -1,3 +1,15 @@
+// @title           Buzz Notification Service API
+// @version         1.0.0
+// @description     Unified notification delivery service supporting email, SMS, push notifications, and in-app messaging with bulk sending capabilities.
+// @contact.name    API Support
+// @contact.email   support@yourdomain.com
+// @host            localhost:8080
+// @BasePath        /
+// @securityDefinitions.apikey  Bearer
+// @in                          header
+// @name                        Authorization
+// @description                 API key prefixed with "Bearer ", e.g. "Bearer YOUR_API_KEY"
+
 package main
 
 import (
@@ -9,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/elight/buzz-service/docs"
 	"github.com/elight/buzz-service/internal/api"
 	"github.com/elight/buzz-service/internal/config"
 	"github.com/elight/buzz-service/internal/domain"

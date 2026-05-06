@@ -16,7 +16,18 @@ func NewDeviceHandler(st *store.PostgresStore) *DeviceHandler {
 	return &DeviceHandler{store: st}
 }
 
-// RegisterDevice handles POST /api/v1/devices/register
+// RegisterDevice godoc
+// @Summary      Register a device
+// @Description  Register a push notification device token for a user
+// @Tags         devices
+// @Accept       json
+// @Produce      json
+// @Param        body  body      RegisterDeviceRequest  true  "Device registration payload"
+// @Success      201   {object}  map[string]interface{}
+// @Failure      400   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/devices/register [post]
 func (h *DeviceHandler) RegisterDevice(c *fiber.Ctx) error {
 	var req struct {
 		UserID   string `json:"user_id"`
@@ -65,7 +76,17 @@ func (h *DeviceHandler) RegisterDevice(c *fiber.Ctx) error {
 	})
 }
 
-// ListUserDevices handles GET /api/v1/devices?user_id=xxx
+// ListUserDevices godoc
+// @Summary      List user devices
+// @Description  Retrieve all registered device tokens for a user
+// @Tags         devices
+// @Produce      json
+// @Param        user_id  query     string  true  "User ID"
+// @Success      200      {object}  map[string]interface{}
+// @Failure      400      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/devices [get]
 func (h *DeviceHandler) ListUserDevices(c *fiber.Ctx) error {
 	userID := c.Query("user_id")
 	if userID == "" {
@@ -92,7 +113,17 @@ func (h *DeviceHandler) ListUserDevices(c *fiber.Ctx) error {
 	})
 }
 
-// UnregisterDevice handles DELETE /api/v1/devices/:token
+// UnregisterDevice godoc
+// @Summary      Unregister a device
+// @Description  Deactivate a push notification device token
+// @Tags         devices
+// @Produce      json
+// @Param        token  path      string  true  "Device token"
+// @Success      200    {object}  MessageResponse
+// @Failure      400    {object}  ErrorResponse
+// @Failure      500    {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/devices/{token} [delete]
 func (h *DeviceHandler) UnregisterDevice(c *fiber.Ctx) error {
 	token := c.Params("token")
 	if token == "" {

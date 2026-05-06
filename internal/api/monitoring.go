@@ -13,7 +13,16 @@ func NewMonitoringHandler(inspector *queue.Inspector) *MonitoringHandler {
 	return &MonitoringHandler{inspector: inspector}
 }
 
-// GetQueueStats handles GET /api/v1/monitoring/queues/:queue
+// GetQueueStats godoc
+// @Summary      Get queue stats
+// @Description  Retrieve processing statistics for a specific queue
+// @Tags         monitoring
+// @Produce      json
+// @Param        queue  path      string  true  "Queue name"
+// @Success      200    {object}  map[string]interface{}
+// @Failure      500    {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/monitoring/queues/{queue} [get]
 func (h *MonitoringHandler) GetQueueStats(c *fiber.Ctx) error {
 	queueName := c.Params("queue")
 
@@ -35,7 +44,15 @@ func (h *MonitoringHandler) GetQueueStats(c *fiber.Ctx) error {
 	})
 }
 
-// ListQueues handles GET /api/v1/monitoring/queues
+// ListQueues godoc
+// @Summary      List queues
+// @Description  Retrieve the names of all active notification queues
+// @Tags         monitoring
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/monitoring/queues [get]
 func (h *MonitoringHandler) ListQueues(c *fiber.Ctx) error {
 	queues, err := h.inspector.ListQueues(c.Context())
 	if err != nil {
@@ -51,7 +68,15 @@ func (h *MonitoringHandler) ListQueues(c *fiber.Ctx) error {
 	})
 }
 
-// GetAllQueueStats handles GET /api/v1/monitoring/stats
+// GetAllQueueStats godoc
+// @Summary      Get all queue stats
+// @Description  Retrieve aggregated processing statistics across all notification queues
+// @Tags         monitoring
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/monitoring/stats [get]
 func (h *MonitoringHandler) GetAllQueueStats(c *fiber.Ctx) error {
 	queues, err := h.inspector.ListQueues(c.Context())
 	if err != nil {
