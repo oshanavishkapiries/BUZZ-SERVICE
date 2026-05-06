@@ -1,9 +1,34 @@
 package api
 
 import (
+	"fmt"
+	"math"
+	"os"
+	"runtime"
+	"strings"
+	"time"
+
 	"github.com/elight/buzz-service/internal/queue"
 	"github.com/gofiber/fiber/v2"
 )
+
+var serviceStartTime = time.Now()
+
+func mbRound(b uint64) float64 {
+	return math.Round(float64(b)/1024/1024*100) / 100
+}
+
+func readLoadAvg() string {
+	data, err := os.ReadFile("/proc/loadavg")
+	if err != nil {
+		return "N/A"
+	}
+	parts := strings.Fields(string(data))
+	if len(parts) > 0 {
+		return parts[0]
+	}
+	return "N/A"
+}
 
 type MonitoringHandler struct {
 	inspector *queue.Inspector
@@ -11,6 +36,40 @@ type MonitoringHandler struct {
 
 func NewMonitoringHandler(inspector *queue.Inspector) *MonitoringHandler {
 	return &MonitoringHandler{inspector: inspector}
+}
+
+// GetSystemMetrics godoc
+// @Summary      Get system metrics
+// @Description  Returns runtime memory, goroutine count, uptime, and system load
+// @Tags         monitoring
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Security     Bearer
+// @Router       /api/v1/monitoring/system [get]
+func (h *MonitoringHandler) GetSystemMetrics(c *fiber.Ctx) error {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	uptime := time.Since(serviceStartTime)
+	hours := int(uptime.Hours())
+	mins := int(uptime.Minutes()) % 60
+	secs := int(uptime.Seconds()) % 60
+
+	return c.JSON(fiber.Map{
+		"uptime": fiber.Map{
+			"seconds":  int(uptime.Seconds()),
+			"display":  fmt.Sprintf("%dh %dm %ds", hours, mins, secs),
+		},
+		"goroutines": runtime.NumGoroutine(),
+		"go_version": runtime.Version(),
+		"load_avg":   readLoadAvg(),
+		"memory": fiber.Map{
+			"heap_alloc_mb": mbRound(m.HeapAlloc),
+			"heap_sys_mb":   mbRound(m.HeapSys),
+			"sys_mb":        mbRound(m.Sys),
+			"gc_runs":       m.NumGC,
+		},
+	})
 }
 
 // GetQueueStats godoc

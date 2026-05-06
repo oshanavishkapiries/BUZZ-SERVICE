@@ -110,7 +110,8 @@ func (g *Gateway) HandleSSEConnection(c *fiber.Ctx) error {
 					Msg("SSE client disconnected")
 				return
 
-			case <-c.Context().Done():
+			case <-g.ctx.Done():
+				// Server is shutting down
 				return
 			}
 		}

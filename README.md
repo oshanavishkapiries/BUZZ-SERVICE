@@ -24,7 +24,7 @@ A unified, high-performance notification delivery service supporting email, SMS,
 - [Features](#features)
 - [Development Setup](#development-setup)
 - [API Documentation](#api-documentation)
-- [API Reference](#api-reference)
+- [Admin Panel](#admin-panel)
 - [Database Schema](#database-schema)
 - [Queue System](#queue-system)
 - [Security](#security)
@@ -121,9 +121,9 @@ Expected response:
 
 ```json
 {
-  "status": "ok",
-  "database": "healthy",
-  "redis": "healthy"
+  "status": "healthy",
+  "version": "1.0.0",
+  "checks": { "database": "up" }
 }
 ```
 
@@ -154,9 +154,9 @@ See the full reference in the [Environment Variables](#environment-variables) se
 
 ## API Documentation
 
-### Interactive Swagger UI
+All API documentation is served live by the application via **Swagger UI**. There are no separate spec files to maintain — the docs are generated from the source code annotations and stay in sync automatically.
 
-When the application is running locally, the full interactive API documentation is available at:
+### Accessing Swagger UI
 
 ```
 http://localhost:8080/swagger/
@@ -164,95 +164,186 @@ http://localhost:8080/swagger/
 
 The Swagger UI provides:
 
-- Live request execution against the local server
+- Live request execution against the running server
 - Full schema documentation for all request and response models
 - Authentication configuration for protected endpoints
-- Downloadable OpenAPI specification
+- Downloadable OpenAPI specification (`/swagger/doc.json`)
 
-### External Viewers
+### Authentication in Swagger UI
 
-If the server is not running, the specification can be viewed through external tools:
-
-- **Swagger Editor** — https://editor.swagger.io/?url=https://raw.githubusercontent.com/yourgithub/buzz-service/main/docs/openapi.yaml
-- **ReDoc** — https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/yourgithub/buzz-service/main/docs/openapi.yaml
-
-### Raw Specification File
+Click the **Authorize** button in the top-right corner and enter your key:
 
 ```
-/workspaces/BUZZ-SERVICE/docs/openapi.yaml
+Bearer buzz_test_key_123
 ```
 
-### Authentication
+All subsequent requests from the UI will include the header automatically.
 
-All API endpoints require a Bearer token passed via the `Authorization` header:
+### Keeping Docs in Sync
 
+When you add or modify an API endpoint, regenerate the swagger docs:
+
+```bash
+make swagger
 ```
-Authorization: Bearer YOUR_API_KEY
-```
 
-When using Swagger UI, click the **Authorize** button in the top-right corner and enter your key in the format shown above. All subsequent requests from the UI will include the header automatically.
+This runs `swag init` and updates the files under `docs/`. Commit the updated `docs/` alongside your handler changes.
 
 ---
 
-## API Reference
+## Admin Panel
 
-**Base URL:** `http://localhost:8080/api/v1`
+A built-in web dashboard for monitoring and testing the notification service. Embedded in the Buzz service itself at `/panel` — no separate backend needed.
 
-### Notifications
+### Accessing the Panel
 
-| Method | Endpoint | Description |
+**Local development:**
+
+```bash
+http://localhost:8080/panel
+```
+
+**GitHub Codespaces:**
+
+```
+https://your-codespaces-url:8080/panel
+```
+
+Just paste your Codespaces URL and append `/panel`.
+
+### Dashboard
+
+The default view shows real-time service health metrics and queue statistics:
+
+**Metrics Cards:**
+- **Heap Memory** — Current heap allocation in MB
+- **System Memory** — Total memory obtained from OS
+- **Goroutines** — Active goroutine count
+- **Uptime** — Time service has been running (formatted as hours, minutes, seconds)
+- **Load Average** — 1-minute system load average
+- **GC Runs** — Total garbage collection cycles
+
+**Queue Statistics Table:**
+- Active jobs per queue (email, sms, push, inapp, batch)
+- Total messages processed (with visual progress bar)
+- Failed message count and percentage
+- Queue state (active/paused)
+- Auto-refreshes every 30 seconds (toggle on/off in the UI)
+
+### Testing Tools
+
+#### Live Stream
+Real-time SSE feed for the configured user. Shows notifications as they arrive with:
+- Timestamp
+- Channel (in_app, email, sms, push)
+- Priority badge (urgent, high, normal, low)
+- Full message body
+
+#### Send Notification
+Direct API form to test notifications without going through a mock backend:
+- **Recipient** — User ID (defaults to configured user)
+- **Channel** — in_app, email, sms, or push
+- **Priority** — urgent, high, normal, low
+- **Subject** — Optional (email only)
+- **Template** — Optional template name for substitution
+- **Body** — Message content
+
+Response shows the created notification with ID and status.
+
+#### Inbox
+View and manage in-app notifications for the user:
+- List all notifications with read/unread status
+- Mark individual notifications as read
+- Mark all as read at once
+- Delete notifications
+- Shows total count and unread count
+
+#### Notifications
+Search and filter all notifications in the system:
+- Filter by **status** (queued, delivered, failed, pending)
+- Filter by **channel** (in_app, email, sms, push)
+- Filter by **recipient** (user ID)
+- Results show ID, channel, priority, status, recipient, body preview, creation time
+
+#### Templates
+Manage reusable notification templates:
+- **List** — View all templates with variables they support
+- **Create** — Define new templates with:
+  - Name (unique identifier)
+  - Channel (email, in_app, sms, push)
+  - Subject (email only)
+  - Body with variable placeholders (e.g., `{{name}}`, `{{order_id}}`)
+  - Variables list (comma-separated)
+
+#### Batch Jobs
+Send bulk notifications and track progress:
+- **Send Batch** — Submit a batch from a datasource:
+  - Datasource ID (UUID of the datasource containing recipient list)
+  - Channel, priority, subject, body
+  - Shows batch ID and initial status
+- **Check Status** — Fetch progress by batch ID:
+  - Shows processed vs total count
+  - Visual progress bar
+  - Failed count (if any)
+- **List All** — View recent batches with status, progress bar, and total count
+
+#### Devices
+Manage push notification device tokens:
+- **Register** — Add a new device:
+  - User ID (defaults to configured user)
+  - Device token (from FCM / APNs)
+  - Platform (android, ios, web)
+- **List** — View all registered devices with token, platform, user, and registration date
+- **Unregister** — Remove a device from a user's account
+
+### Configuration
+
+Set credentials at the top of the panel:
+
+| Field | Default | Description |
 |---|---|---|
-| POST | `/notifications` | Send a single notification |
-| GET | `/notifications` | List all notifications |
-| GET | `/notifications/:id` | Get notification details by ID |
+| **API Key** | `buzz_test_key_123` | Bearer token for API authentication. Must match an active API key in the database. |
+| **User ID** | `user-123` | The end-user ID for inbox queries and SSE subscriptions. Used in the `X-User-ID` header. |
 
-### Batches
+**Note:** All API calls in the panel are authenticated using the configured API key. If calls fail with 403, verify the key has the necessary scopes (e.g., `notification:send`, `monitoring:read`, `inbox:read`).
 
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/batches/send` | Send bulk notifications to multiple recipients |
-| GET | `/batches/:id` | Get batch status and progress |
+### System Metrics API
 
-### Templates
+The panel fetches metrics from a dedicated endpoint:
 
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/templates` | Create a new notification template |
-| GET | `/templates` | List all templates |
-| GET | `/templates/:name` | Get a template by name |
-| PATCH | `/templates/:name` | Update an existing template |
+```
+GET /api/v1/monitoring/system
+Authorization: Bearer <api-key>
+```
 
-### Devices
+Response:
 
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/devices/register` | Register a device for push notifications |
-| GET | `/devices` | List all registered devices for a user |
+```json
+{
+  "uptime": {
+    "seconds": 3600,
+    "display": "1h 0m 0s"
+  },
+  "goroutines": 42,
+  "go_version": "go1.26.1",
+  "load_avg": "0.52",
+  "memory": {
+    "heap_alloc_mb": 15.2,
+    "heap_sys_mb": 30.0,
+    "sys_mb": 45.0,
+    "gc_runs": 15
+  }
+}
+```
 
-### Streaming
+### Design & Theme
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/stream` | Real-time notification stream via Server-Sent Events |
-
-### Monitoring
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/monitoring/queues` | Get statistics for all queues |
-| GET | `/monitoring/queues/:name` | Get statistics for a specific queue |
-
-For complete request and response schemas, refer to the [OpenAPI specification](./docs/openapi.yaml).
-
-### Integration Examples
-
-Client implementation examples are available for multiple languages:
-
-| Language | File |
-|---|---|
-| Shell / cURL | `./docs/examples/curl-examples.sh` |
-| Python | `./docs/examples/python-examples.py` |
-| JavaScript / Node.js | `./docs/examples/javascript-examples.js` |
+- **Color scheme** — Jupyter notebook inspired with orange accent (`#F37626`), clean whites, and professional dashboard layout
+- **No emojis** — Clean, minimal interface focused on readability
+- **Responsive** — Works on desktop, tablet, and mobile (sidebar hides on small screens)
+- **Client-side routing** — Single-page app; all navigation happens in the browser without page reloads
+- **Auto-refresh** — Dashboard metrics refresh every 30 seconds (configurable via toggle button)
+- **Result panels** — API responses displayed in syntax-highlighted JSON for easy debugging
 
 ---
 
@@ -339,7 +430,6 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 | CORS | Enabled for cross-origin browser clients |
 | Audit logging | Request ID tracking on all inbound requests |
 | Injection prevention | Parameterized queries throughout the data layer |
-| Password storage | bcrypt hashing with cost factor enforcement |
 
 ---
 

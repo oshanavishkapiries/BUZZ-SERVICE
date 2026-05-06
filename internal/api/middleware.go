@@ -82,6 +82,10 @@ func AuthMiddleware(store APIKeyStore) fiber.Handler {
 		c.Locals(string(ContextKeyAPIKey), key)
 		c.Locals(string(ContextKeyScopes), key.Scopes)
 
+		// Allow callers to identify the end-user via X-User-ID header.
+		// This is needed for inbox and SSE endpoints which filter by user.
+		c.Locals("user_id", c.Get("X-User-ID"))
+
 		// Update last used timestamp (async to not block request)
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

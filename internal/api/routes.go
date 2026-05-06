@@ -21,12 +21,15 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowMethods:     "GET,POST,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-User-ID",
 		AllowCredentials: false,
 	}))
 
 	// Public health check
 	app.Get("/health", HealthCheck(db))
+
+	// Admin panel (public, no auth — API key entered in the UI itself)
+	registerPanelRoutes(app)
 
 	// Swagger UI (public documentation)
 	app.Get("/swagger/*", swagger.New(swagger.Config{
@@ -92,6 +95,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	inspector := queue.NewInspector(redisAddr, cfg.Redis.Password)
 	monitoringHandler := NewMonitoringHandler(inspector)
 	monitoring := v1.Group("/monitoring")
+	monitoring.Get("/system", RequireScope("monitoring:read"), monitoringHandler.GetSystemMetrics)
 	monitoring.Get("/queues", RequireScope("monitoring:read"), monitoringHandler.ListQueues)
 	monitoring.Get("/queues/:queue", RequireScope("monitoring:read"), monitoringHandler.GetQueueStats)
 	monitoring.Get("/stats", RequireScope("monitoring:read"), monitoringHandler.GetAllQueueStats)
