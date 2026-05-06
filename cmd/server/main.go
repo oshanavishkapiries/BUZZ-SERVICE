@@ -3,7 +3,6 @@
 // @description     Unified notification delivery service supporting email, SMS, push notifications, and in-app messaging with bulk sending capabilities.
 // @contact.name    API Support
 // @contact.email   support@yourdomain.com
-// @host            localhost:8080
 // @BasePath        /
 // @securityDefinitions.apikey  Bearer
 // @in                          header

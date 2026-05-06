@@ -29,7 +29,9 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	app.Get("/health", HealthCheck(db))
 
 	// Swagger UI (public documentation)
-	app.Get("/swagger/*", swagger.New())
+	app.Get("/swagger/*", swagger.New(swagger.Config{
+		DocExpansion: "none",
+	}))
 
 	// Webhook routes (public, no auth required)
 	webhookHandler := NewWebhookHandler(db)
