@@ -1,329 +1,470 @@
-# Buzz Notification Service (v1.0.0)
+```
+ ██████╗ ██╗   ██╗███████╗███████╗
+ ██╔══██╗██║   ██║╚══███╔╝╚══███╔╝
+ ██████╔╝██║   ██║  ███╔╝   ███╔╝
+ ██╔══██╗██║   ██║ ███╔╝   ███╔╝
+ ██████╔╝╚██████╔╝███████╗███████╗
+ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝
 
-Unified multi-channel notification delivery service supporting email, SMS, push notifications, and in-app messaging.
+ Buzz Notification Service  |  v1.0.0
+ Unified Multi-Channel Notification Delivery
+```
 
-**Quick Links:**
-- 🚀 [Development Setup](#-development-setup)
-- 📚 [Swagger API Documentation](#-swagger--openapi-docs)
-- 🐳 [Docker Setup](#-docker-commands)
+---
 
+# Buzz Notification Service
+
+A unified, high-performance notification delivery service supporting email, SMS, push notifications, and in-app messaging. Built for reliability, scalability, and developer ergonomics.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Development Setup](#development-setup)
+- [API Documentation](#api-documentation)
+- [API Reference](#api-reference)
+- [Database Schema](#database-schema)
+- [Queue System](#queue-system)
+- [Security](#security)
+- [Environment Variables](#environment-variables)
+- [Docker Reference](#docker-reference)
+
+---
+
+## Overview
+
+Buzz provides a single, consistent interface for sending notifications across multiple delivery channels. It abstracts provider-specific implementation details behind a clean REST API, handles delivery queuing and retries internally, and exposes real-time status through Server-Sent Events and queue monitoring endpoints.
+
+---
 
 ## Features
 
-- **Multi-channel delivery** - Email, SMS, push notifications, and in-app messaging
-- **Bulk notifications** - Send to multiple recipients via external datasources with progress tracking
-- **Real-time delivery** - Server-Sent Events (SSE) for instant in-app notifications
-- **Template management** - Create and reuse notification templates with variable substitution
-- **Delivery tracking** - Monitor notification status and delivery analytics
-- **Queue monitoring** - Real-time queue statistics and performance monitoring
-- **Request deduplication** - Idempotency keys for reliable bulk operations
+| Feature | Description |
+|---|---|
+| Multi-channel delivery | Email, SMS, push notifications, and in-app messaging through a unified API |
+| Bulk notifications | Send to multiple recipients via external datasources with progress tracking |
+| Real-time delivery | Server-Sent Events (SSE) for instant in-app notification streaming |
+| Template management | Create and reuse notification templates with variable substitution |
+| Delivery tracking | Monitor notification status and access delivery analytics |
+| Queue monitoring | Real-time queue statistics and worker performance monitoring |
+| Request deduplication | Idempotency keys for safe and reliable bulk operations |
 
-## 🚀 Development Setup
+---
+
+## Development Setup
 
 ### Prerequisites
-- Go 1.26+
-- Docker & Docker Compose
+
+- Go 1.21+
+- Docker and Docker Compose
 - Git
 
-### Quick Start
+---
 
-#### 1. Install Go Dependencies
+### Step 1 — Install Dependencies
+
 ```bash
 cd /workspaces/BUZZ-SERVICE
 go mod download
 go mod tidy
 ```
 
-#### 2. Start Database & Redis with Docker
+---
+
+### Step 2 — Start Infrastructure Services
+
 ```bash
 docker-compose up -d
 ```
 
-This will start:
-- **PostgreSQL** (v15) on port `5432`
-  - Database: `buzz_service`
-  - User: `buzz_user`
-  - Password: `secure_password`
-- **Redis** (v7) on port `6379`
-- **Application** on port `8080`
+This will provision the following services:
 
-Verify services are running:
+| Service | Version | Port | Details |
+|---|---|---|---|
+| PostgreSQL | 15 | 5432 | Database: `buzz_service`, User: `buzz_user` |
+| Redis | 7 | 6379 | Task queue backend |
+| Application | latest | 8080 | REST API server |
+
+Verify all services are healthy:
+
 ```bash
 docker-compose ps
 ```
 
-#### 3. Run Development Server with Hot Reload
+---
 
-Using `air` for automatic rebuild and restart on file changes:
+### Step 3 — Start the Development Server
+
+The project uses `air` for hot reload during development. On file change, the server will automatically rebuild and restart.
 
 ```bash
-# Install air (if not already installed)
+# Install air (first time only)
 go install github.com/air-verse/air@latest
 
-# Start dev server with hot reload
+# Start development server
 air -c .air.toml
 ```
 
-The server will:
-- Start on `http://localhost:8080`
-- Auto-rebuild on `.go` file changes
-- Auto-restart the application
-- Log build errors to `build-errors.log`
+Build errors are written to `build-errors.log` in the project root.
 
-#### 4. Verify Setup
+---
+
+### Step 4 — Verify the Setup
+
 ```bash
-# Check health endpoint
 curl http://localhost:8080/health
-
-# Expected response:
-# {"status":"ok","database":"healthy","redis":"healthy"}
 ```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "database": "healthy",
+  "redis": "healthy"
+}
+```
+
+---
 
 ### Environment Configuration
 
-Copy `.env.example` to `.env` and customize:
+Copy the example environment file and adjust values as needed:
 
 ```bash
 cp .env.example .env
 ```
 
-Key configuration options:
-- **Server**: `SERVER_PORT`, `SERVER_HOST`, `ENV`
-- **Database**: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-- **Redis**: `REDIS_HOST`, `REDIS_PORT`
-- **Email**: `EMAIL_PROVIDER` (smtp/ses)
-- **SMS**: `SMS_PROVIDER` (notifylk/twilio/router)
-- **Push**: `FCM_CREDENTIALS_FILE`
+Key configuration groups:
 
-## 📚 Swagger & OpenAPI Docs
+| Group | Variables |
+|---|---|
+| Server | `SERVER_PORT`, `SERVER_HOST`, `ENV` |
+| Database | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` |
+| Redis | `REDIS_HOST`, `REDIS_PORT` |
+| Email | `EMAIL_PROVIDER` — `smtp` or `ses` |
+| SMS | `SMS_PROVIDER` — `notifylk`, `twilio`, or `router` |
+| Push | `FCM_CREDENTIALS_FILE` |
 
-### View Swagger UI Locally (When Backend Running)
+See the full reference in the [Environment Variables](#environment-variables) section.
 
-Once the application is running, access the interactive Swagger UI:
+---
 
-**🔗 Local Swagger UI:** http://localhost:8080/swagger/
+## API Documentation
 
-This provides:
-- ✅ Full API documentation
-- ✅ Try-out requests directly in the UI
-- ✅ Request/response examples
-- ✅ Authentication setup
-- ✅ All endpoints with parameters
+### Interactive Swagger UI
 
-### Swagger UI Features
-- **Test Endpoints**: Send requests directly from the UI
-- **Authentication**: Add your API key for testing protected endpoints
-- **Explore Models**: View data structures for requests/responses
-- **Download Spec**: Export OpenAPI specification
+When the application is running locally, the full interactive API documentation is available at:
 
-### Alternative Ways to View API Docs
+```
+http://localhost:8080/swagger/
+```
 
-#### Online (View Only - External Links)
-- **Swagger UI**: https://editor.swagger.io/?url=https://raw.githubusercontent.com/yourgithub/buzz-service/main/docs/openapi.yaml
-- **ReDoc**: https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/yourgithub/buzz-service/main/docs/openapi.yaml
+The Swagger UI provides:
 
-#### OpenAPI Specification File
-The raw specification file is available at:
+- Live request execution against the local server
+- Full schema documentation for all request and response models
+- Authentication configuration for protected endpoints
+- Downloadable OpenAPI specification
+
+### External Viewers
+
+If the server is not running, the specification can be viewed through external tools:
+
+- **Swagger Editor** — https://editor.swagger.io/?url=https://raw.githubusercontent.com/yourgithub/buzz-service/main/docs/openapi.yaml
+- **ReDoc** — https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/yourgithub/buzz-service/main/docs/openapi.yaml
+
+### Raw Specification File
+
 ```
 /workspaces/BUZZ-SERVICE/docs/openapi.yaml
 ```
 
-### API Authentication in Swagger UI
+### Authentication
 
-To test protected endpoints in Swagger UI:
+All API endpoints require a Bearer token passed via the `Authorization` header:
 
-1. Look for the **Authorize** button (top right)
-2. Click it and enter your API key in the format: `Bearer YOUR_API_KEY`
-3. All subsequent requests will include the Authorization header
+```
+Authorization: Bearer YOUR_API_KEY
+```
 
-### Main API Endpoints
+When using Swagger UI, click the **Authorize** button in the top-right corner and enter your key in the format shown above. All subsequent requests from the UI will include the header automatically.
 
-**Base URL**: `http://localhost:8080/api/v1`
+---
 
-**Authentication**: All endpoints require `Authorization: Bearer YOUR_API_KEY` header
+## API Reference
+
+**Base URL:** `http://localhost:8080/api/v1`
+
+### Notifications
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+|---|---|---|
 | POST | `/notifications` | Send a single notification |
 | GET | `/notifications` | List all notifications |
-| GET | `/notifications/:id` | Get notification details |
-| POST | `/batches/send` | Send bulk notifications |
-| GET | `/batches/:id` | Get batch status |
-| POST | `/templates` | Create notification template |
-| GET | `/templates` | List all templates |
-| GET | `/templates/:name` | Get template by name |
-| PATCH | `/templates/:name` | Update template |
-| POST | `/devices/register` | Register device for push notifications |
-| GET | `/devices` | List user devices |
-| GET | `/stream` | Real-time notification stream (SSE) |
-| GET | `/monitoring/queues` | Get queue statistics |
+| GET | `/notifications/:id` | Get notification details by ID |
 
-See [complete OpenAPI spec](./docs/openapi.yaml) for all endpoints and models.
+### Batches
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/batches/send` | Send bulk notifications to multiple recipients |
+| GET | `/batches/:id` | Get batch status and progress |
+
+### Templates
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/templates` | Create a new notification template |
+| GET | `/templates` | List all templates |
+| GET | `/templates/:name` | Get a template by name |
+| PATCH | `/templates/:name` | Update an existing template |
+
+### Devices
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/devices/register` | Register a device for push notifications |
+| GET | `/devices` | List all registered devices for a user |
+
+### Streaming
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/stream` | Real-time notification stream via Server-Sent Events |
+
+### Monitoring
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/monitoring/queues` | Get statistics for all queues |
+| GET | `/monitoring/queues/:name` | Get statistics for a specific queue |
+
+For complete request and response schemas, refer to the [OpenAPI specification](./docs/openapi.yaml).
 
 ### Integration Examples
 
-Example implementations in multiple languages:
-- **[cURL examples](./docs/examples/curl-examples.sh)** - Shell/HTTP examples
-- **[Python examples](./docs/examples/python-examples.py)** - Python client code
-- **[JavaScript examples](./docs/examples/javascript-examples.js)** - Node.js & Browser examples
+Client implementation examples are available for multiple languages:
 
-## 🛠️ Common Development Tasks
+| Language | File |
+|---|---|
+| Shell / cURL | `./docs/examples/curl-examples.sh` |
+| Python | `./docs/examples/python-examples.py` |
+| JavaScript / Node.js | `./docs/examples/javascript-examples.js` |
 
-### View Logs
-```bash
-# All services
-docker-compose logs -f
+---
 
-# Specific service
-docker-compose logs -f buzz-service
-docker-compose logs -f buzz-postgres
-docker-compose logs -f buzz-redis
-```
+## Database Schema
 
-### Access PostgreSQL Database
+Migrations run automatically on application startup. The following tables are managed by the service:
+
+| Table | Purpose |
+|---|---|
+| `notifications` | Notification records with full status tracking |
+| `batches` | Bulk notification batch metadata and progress |
+| `templates` | Reusable notification message templates |
+| `inbox` | In-app notification storage per recipient |
+| `device_tokens` | Push notification device registrations |
+| `datasources` | External data sources used for bulk operations |
+| `api_keys` | API key management with scope definitions |
+| `schema_migrations` | Applied migration tracking |
+
+### Accessing the Database Directly
+
 ```bash
 docker exec -it buzz-postgres psql -U buzz_user -d buzz_service
+```
 
-# List tables
+Useful `psql` commands:
+
+```sql
+-- List all tables
 \dt
 
-# View table structure
+-- Inspect a specific table
 \d notifications
+
+-- Exit
+\q
 ```
 
-### Rebuild Database (Reset)
+### Reset the Database
+
 ```bash
-# Stop and remove containers with volumes
+# Remove containers and all associated volumes
 docker-compose down -v
 
-# Start fresh
+# Reprovision from scratch
 docker-compose up -d
 ```
 
-### Run Tests
-```bash
-go test ./...
+---
 
-# With verbose output
-go test -v ./...
+## Queue System
 
-# Run specific package tests
-go test -v ./internal/api
-```
+Buzz uses **Asynq**, a Redis-backed distributed task queue, for all asynchronous delivery operations.
 
-### Build for Production
-```bash
-CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o buzz-service ./cmd/server
-```
+### Managed Queues
 
-### Build Docker Image Locally
-```bash
-docker build -t buzz-service:latest .
-docker run -p 8080:8080 buzz-service:latest
-```
+| Queue | Purpose |
+|---|---|
+| `email` | Outbound email delivery tasks |
+| `sms` | Outbound SMS delivery tasks |
+| `push` | Push notification dispatch tasks |
+| `inapp` | In-app message delivery tasks |
+| `batch` | Bulk batch processing and coordination |
 
-## 🐳 Docker Commands
+### Monitoring Queues
 
 ```bash
-# Start services
-docker-compose up -d
+# All queues
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  http://localhost:8080/api/v1/monitoring/queues
 
-# Stop services (keep volumes)
-docker-compose down
-
-# Stop and remove everything (clear volumes)
-docker-compose down -v
-
-# View service status
-docker-compose ps
-
-# View real-time logs
-docker-compose logs -f
-
-# View logs from specific service
-docker-compose logs -f buzz-service
-
-# Rebuild images
-docker-compose build --no-cache
-
-# Restart specific service
-docker-compose restart buzz-service
-
-# Execute command in container
-docker exec -it buzz-postgres psql -U buzz_user -d buzz_service
+# Specific queue
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  http://localhost:8080/api/v1/monitoring/queues/email
 ```
 
-## 📊 Database Schema
+---
 
-PostgreSQL tables:
-- `notifications` - Notification records with status tracking
-- `batches` - Bulk notification batch metadata
-- `templates` - Notification message templates
-- `inbox` - In-app notification storage
-- `device_tokens` - Push notification device registrations
-- `datasources` - External data sources for bulk operations
-- `api_keys` - API key management and scopes
-- `schema_migrations` - Database migration tracking
+## Security
 
-Migrations run automatically on application startup.
+| Control | Implementation |
+|---|---|
+| Authentication | API key-based Bearer token authentication |
+| Authorization | Role-based access control (RBAC) with configurable scopes |
+| CORS | Enabled for cross-origin browser clients |
+| Audit logging | Request ID tracking on all inbound requests |
+| Injection prevention | Parameterized queries throughout the data layer |
+| Password storage | bcrypt hashing with cost factor enforcement |
 
-## ⚙️ Queue System
+---
 
-Uses **Asynq** (Redis-backed task queue) for:
-- Email delivery
-- SMS delivery
-- Push notifications
-- In-app messaging
-- Batch processing
-
-Monitor queues:
-```bash
-# View all queue statistics
-curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:8080/api/v1/monitoring/queues
-
-# View specific queue stats
-curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:8080/api/v1/monitoring/queues/email
-```
-
-## 🔐 Security
-
-- ✅ API key authentication (Bearer token)
-- ✅ Role-based access control (RBAC) with scopes
-- ✅ CORS enabled for cross-origin requests
-- ✅ Request ID tracking for audit logs
-- ✅ SQL injection prevention
-- ✅ Password hashing with bcrypt
-
-## 📝 Environment Variables
-
-See `.env.example` for complete list. Common variables:
+## Environment Variables
 
 ```env
+# ---------------------------------------------------------------------------
 # Server
+# ---------------------------------------------------------------------------
 SERVER_PORT=8080
 SERVER_HOST=0.0.0.0
 ENV=development
 
+# ---------------------------------------------------------------------------
 # Database
+# ---------------------------------------------------------------------------
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=buzz_service
 DB_USER=buzz_user
 DB_PASSWORD=secure_password
 
+# ---------------------------------------------------------------------------
 # Redis
+# ---------------------------------------------------------------------------
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
+# ---------------------------------------------------------------------------
 # Email
-EMAIL_PROVIDER=smtp
+# ---------------------------------------------------------------------------
+EMAIL_PROVIDER=smtp        # smtp | ses
 EMAIL_FROM=noreply@buzz.local
 
+# ---------------------------------------------------------------------------
 # SMS
-SMS_PROVIDER=router
+# ---------------------------------------------------------------------------
+SMS_PROVIDER=router        # notifylk | twilio | router
 
+# ---------------------------------------------------------------------------
+# Push Notifications
+# ---------------------------------------------------------------------------
+FCM_CREDENTIALS_FILE=
+
+# ---------------------------------------------------------------------------
 # Logging
-LOG_LEVEL=info
-LOG_FORMAT=json
+# ---------------------------------------------------------------------------
+LOG_LEVEL=info             # debug | info | warn | error
+LOG_FORMAT=json            # json | text
 ```
 
+For the complete list of available variables, refer to `.env.example`.
+
+---
+
+## Docker Reference
+
+### Service Management
+
+```bash
+# Start all services in the background
+docker-compose up -d
+
+# Stop services, preserve volumes
+docker-compose down
+
+# Stop services, remove volumes and data
+docker-compose down -v
+
+# Rebuild images without cache
+docker-compose build --no-cache
+
+# Restart a specific service
+docker-compose restart buzz-service
+```
+
+### Logs
+
+```bash
+# Stream logs from all services
+docker-compose logs -f
+
+# Stream logs from a specific service
+docker-compose logs -f buzz-service
+docker-compose logs -f buzz-postgres
+docker-compose logs -f buzz-redis
+```
+
+### Status
+
+```bash
+docker-compose ps
+```
+
+### Building the Production Binary
+
+```bash
+CGO_ENABLED=0 GOOS=linux go build \
+  -a -installsuffix cgo \
+  -o buzz-service \
+  ./cmd/server
+```
+
+### Building and Running the Docker Image
+
+```bash
+docker build -t buzz-service:latest .
+docker run -p 8080:8080 buzz-service:latest
+```
+
+---
+
+### Running Tests
+
+```bash
+# Run all tests
+go test ./...
+
+# Run with verbose output
+go test -v ./...
+
+# Run tests for a specific package
+go test -v ./internal/api
+```
+
+---
+
+*Buzz Notification Service v1.0.0*
