@@ -64,6 +64,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	templates.Get("/", RequireScope("template:read"), templateHandler.ListTemplates)
 	templates.Get("/:name", RequireScope("template:read"), templateHandler.GetTemplate)
 	templates.Patch("/:name", RequireScope("template:write"), templateHandler.UpdateTemplate)
+	templates.Delete("/:name", RequireScope("template:write"), templateHandler.DeleteTemplate)
 
 	// Devices (push notification device management)
 	deviceHandler := NewDeviceHandler(db)

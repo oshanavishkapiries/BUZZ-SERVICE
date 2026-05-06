@@ -60,12 +60,19 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 		subjectPtr = nil
 	}
 
+	// Ensure variables is not nil (database has NOT NULL constraint)
+	variables := req.Variables
+	if variables == nil {
+		variables = []string{}
+	}
+
 	template := &domain.Template{
 		ID:        uuid.New(),
 		Name:      req.Name,
 		Channels:  channels,
 		Subject:   subjectPtr,
 		Body:      req.Body,
+		Variables: variables,
 		IsActive:  true,
 		Config:    req.Metadata,
 	}
@@ -142,10 +149,16 @@ func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
 		})
 	}
 
+	// Get total count
+	total, err := repo.Count(c.Context(), filters)
+	if err != nil {
+		total = len(templates) // fallback to returned count if count fails
+	}
+
 	return c.JSON(fiber.Map{
-		"data":  templates,
-		"total": len(templates),
-		"limit": limit,
+		"data":   templates,
+		"total":  total,
+		"limit":  limit,
 		"offset": offset,
 	})
 }
@@ -209,5 +222,40 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "template updated successfully",
 		"data":    template,
+	})
+}
+
+// DeleteTemplate godoc
+// @Summary      Delete a template
+// @Description  Delete a template by name (soft delete)
+// @Tags         templates
+// @Produce      json
+// @Param        name  path      string  true  "Template name"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      404   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/templates/{name} [delete]
+func (h *TemplateHandler) DeleteTemplate(c *fiber.Ctx) error {
+	name := c.Params("name")
+
+	repo := store.NewTemplateRepository(h.store.DB())
+	// First get the template to get its ID
+	template, err := repo.GetByName(c.Context(), name)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "template not found",
+		})
+	}
+
+	// Delete by ID
+	if err := repo.Delete(c.Context(), template.ID); err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "failed to delete template",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "template deleted successfully",
 	})
 }

@@ -128,11 +128,12 @@ func validateToAddress(to string, channel domain.Channel) error {
 
 // CreateTemplateRequest represents the request body for creating a template
 type CreateTemplateRequest struct {
-	Name     string                 `json:"name"`
-	Channel  domain.Channel         `json:"channel"`
-	Subject  string                 `json:"subject,omitempty"`
-	Body     string                 `json:"body"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Name      string                 `json:"name"`
+	Channel   domain.Channel         `json:"channel"`
+	Subject   string                 `json:"subject,omitempty"`
+	Body      string                 `json:"body"`
+	Variables []string               `json:"variables,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // Validate validates the create template request

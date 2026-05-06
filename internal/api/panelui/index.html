@@ -314,6 +314,7 @@
       <div id="nl-table">
         <div class="empty"><p>Run a search to see notifications</p></div>
       </div>
+      <div id="nl-pagination"></div>
     </section>
 
     <!-- ── Templates ─────────────────────────────────────────────────── -->
@@ -326,13 +327,14 @@
         <button class="btn btn-primary" onclick="Templates.list()">Load templates</button>
       </div>
 
-      <div id="tmpl-list" style="margin-bottom:24px">
+      <div id="tmpl-list" style="margin-bottom:8px">
         <div class="empty"><p>Click "Load templates" to fetch all templates</p></div>
       </div>
+      <div id="tmpl-pagination"></div>
 
-      <!-- Create template form -->
-      <div style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text)">Create template</div>
-      <div class="card">
+      <!-- Create/Edit template form -->
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px;margin-top:24px;color:var(--text)">Create or Edit Template</div>
+      <div class="card form-section">
         <div class="form-grid">
           <div class="field">
             <label>Name</label>
@@ -361,7 +363,9 @@
           <textarea id="t-body" placeholder="Hi {{name}}, welcome to {{app}}!"></textarea>
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" onclick="Templates.create()">Create template</button>
+          <button class="btn btn-primary" onclick="Templates.create()">Create</button>
+          <button class="btn btn-secondary" onclick="Templates.update()" style="display:none" id="t-update-btn">Update</button>
+          <button class="btn" onclick="['t-name','t-subject','t-body','t-vars','t-channel'].forEach(id=>{const el=$(id);if(el){el.value='';el.readOnly=false}});$('t-update-btn').style.display='none'">Clear</button>
         </div>
       </div>
 

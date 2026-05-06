@@ -217,3 +217,31 @@ func (r *TemplateRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 	return nil
 }
+
+// Count returns the total count of templates matching the filters
+func (r *TemplateRepository) Count(ctx context.Context, filters map[string]interface{}) (int, error) {
+	query := `SELECT COUNT(*) FROM templates WHERE deleted_at IS NULL`
+
+	args := []interface{}{}
+	argIndex := 1
+
+	// Add filters
+	if isActive, ok := filters["is_active"].(bool); ok {
+		query += fmt.Sprintf(" AND is_active = $%d", argIndex)
+		args = append(args, isActive)
+		argIndex++
+	}
+	if channel, ok := filters["channel"].(string); ok {
+		query += fmt.Sprintf(" AND $%d = ANY(channels)", argIndex)
+		args = append(args, channel)
+		argIndex++
+	}
+
+	var count int
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count templates: %w", err)
+	}
+
+	return count, nil
+}

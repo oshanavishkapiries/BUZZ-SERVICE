@@ -358,14 +358,20 @@ const Inbox = {
 
 // ── Notification List ─────────────────────────────────────────────────────
 const NotifList = {
-  async load() {
-    const params = new URLSearchParams({ limit: 20 });
+  page: 0,
+  limit: 20,
+  total: 0,
+
+  async load(page = 0) {
+    this.page = page;
+    const offset = page * this.limit;
+    const params = new URLSearchParams({ limit: this.limit, offset });
     const status  = $('nl-status').value;
     const channel = $('nl-channel').value;
     const to      = $('nl-to').value.trim();
     if (status)  params.set('status', status);
     if (channel) params.set('channel', channel);
-    if (to)      params.set('to', to);
+    if (to)      params.set('recipient_id', to);
 
     try {
       const d = await API.get('/api/v1/notifications?' + params);
@@ -377,11 +383,15 @@ const NotifList = {
 
   render(d) {
     const items = d.data || [];
-    $('nl-summary').textContent = `${d.total ?? items.length} notifications`;
+    this.total = d.total || 0;
+    $('nl-summary').textContent = `${this.total} notifications (${this.page * this.limit + 1} - ${Math.min((this.page + 1) * this.limit, this.total)})`;
+
     if (!items.length) {
       $('nl-table').innerHTML = `<div class="empty"><p>No notifications found</p></div>`;
+      this.renderPagination();
       return;
     }
+
     $('nl-table').innerHTML = `
       <div class="table-wrap">
         <table>
@@ -390,49 +400,108 @@ const NotifList = {
             <th>Recipient</th><th>Body</th><th>Created</th>
           </tr></thead>
           <tbody>
-            ${items.map(n => `<tr>
+            ${items.map(n => {
+              const recip = (n.recipient && n.recipient.address) || (n.recipient && n.recipient.user_id) || n.to || '—';
+              return `<tr>
               <td class="td-mono">${esc((n.id||'').slice(0,8))}…</td>
               <td>${channelBadge(n.channel)}</td>
               <td>${priorityBadge(n.priority)}</td>
               <td>${statusBadge(n.status)}</td>
-              <td class="td-truncate">${esc(n.to||'—')}</td>
-              <td class="td-truncate">${esc((n.body||'').slice(0,60))}${(n.body||'').length>60?'…':''}</td>
+              <td class="td-truncate">${esc(recip)}</td>
+              <td class="td-truncate">${esc((n.body||'').slice(0,50))}${(n.body||'').length>50?'…':''}</td>
               <td class="td-mono">${fmtDateShort(n.created_at)}</td>
-            </tr>`).join('')}
+            </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>`;
+    this.renderPagination();
+  },
+
+  renderPagination() {
+    const pages = Math.ceil(this.total / this.limit);
+    const pagEl = $('nl-pagination');
+    if (!pagEl) return;
+
+    if (pages <= 1) {
+      pagEl.innerHTML = '';
+      return;
+    }
+
+    let html = `<div class="pagination" style="margin-top:12px">`;
+    if (this.page > 0) html += `<button class="btn btn-sm" onclick="NotifList.load(${this.page-1})">← Prev</button>`;
+    html += `<span style="margin: 0 8px; font-size:13px">Page ${this.page+1} of ${pages}</span>`;
+    if (this.page < pages - 1) html += `<button class="btn btn-sm" onclick="NotifList.load(${this.page+1})">Next →</button>`;
+    html += `</div>`;
+    pagEl.innerHTML = html;
   },
 };
 
 // ── Templates ─────────────────────────────────────────────────────────────
 const Templates = {
-  async list() {
+  page: 0,
+  limit: 10,
+  total: 0,
+
+  async list(page = 0) {
+    this.page = page;
+    const offset = page * this.limit;
     try {
-      const d = await API.get('/api/v1/templates');
-      const items = d.data || d || [];
+      const d = await API.get(`/api/v1/templates?limit=${this.limit}&offset=${offset}`);
+      const items = d.data || [];
+      this.total = d.total || 0;
+
       if (!items.length) {
         $('tmpl-list').innerHTML = `<div class="empty"><p>No templates</p></div>`;
+        this.renderPagination();
         return;
       }
+
+      const channels = (t) => (t.channels || [t.channel]).map(ch => channelBadge(ch)).join(' ');
       $('tmpl-list').innerHTML = `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Channel</th><th>Subject</th><th>Body preview</th><th>Variables</th></tr></thead>
+            <thead><tr><th>Name</th><th>Channels</th><th>Subject</th><th>Body preview</th><th>Variables</th><th>Actions</th></tr></thead>
             <tbody>
-              ${items.map(t => `<tr>
+              ${items.map(t => {
+                const vars = (t.variables||[]).map(v => '{{' + esc(v) + '}}').join(', ');
+                return `<tr>
                 <td class="td-name">${esc(t.name)}</td>
-                <td>${channelBadge(t.channel)}</td>
+                <td>${channels(t)}</td>
                 <td class="td-truncate">${esc(t.subject||'—')}</td>
-                <td class="td-truncate">${esc((t.body||'').slice(0,60))}</td>
-                <td><span class="td-mono" style="font-size:11px">${(t.variables||[]).map(v=>`{{${esc(v)}}}`).join(', ')||'—'}</span></td>
-              </tr>`).join('')}
+                <td class="td-truncate">${esc((t.body||'').slice(0,40))}${(t.body||'').length>40?'…':''}</td>
+                <td><span class="td-mono" style="font-size:10px">${vars||'—'}</span></td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" onclick="Templates.editForm('${esc(t.name)}')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Delete template?')) Templates.delete('${esc(t.name)}')">Del</button>
+                </td>
+              </tr>`;
+              }).join('')}
             </tbody>
           </table>
         </div>`;
+      this.renderPagination();
     } catch(e) {
       $('tmpl-list').innerHTML = `<div class="empty"><p>${esc(e.message)}</p></div>`;
     }
+  },
+
+  renderPagination() {
+    const pages = Math.ceil(this.total / this.limit);
+    const pagEl = $('tmpl-pagination');
+    if (!pagEl) return;
+
+    if (pages <= 1) {
+      pagEl.innerHTML = '';
+      return;
+    }
+
+    let html = `<div class="pagination" style="margin-top:12px">`;
+    if (this.page > 0) html += `<button class="btn btn-sm" onclick="Templates.list(${this.page-1})">← Prev</button>`;
+    html += `<span style="margin: 0 8px; font-size:13px">Page ${this.page+1} of ${pages}</span>`;
+    if (this.page < pages - 1) html += `<button class="btn btn-sm" onclick="Templates.list(${this.page+1})">Next →</button>`;
+    html += `</div>`;
+    pagEl.innerHTML = html;
   },
 
   async create() {
@@ -448,11 +517,62 @@ const Templates = {
       const d = await API.post('/api/v1/templates', { name, channel, subject, body, variables: vars });
       showResult($('tmpl-result'), d, !d.error);
       if (!d.error) {
-        ['t-name','t-subject','t-body','t-vars'].forEach(id => $(id).value = '');
-        this.list();
+        ['t-name','t-subject','t-body','t-vars','t-channel'].forEach(id => {
+          const el = $(id);
+          if (el) el.value = el.tagName === 'SELECT' ? 'email' : '';
+        });
+        this.list(0);
       }
     } catch(e) {
       showResult($('tmpl-result'), { error: e.message }, false);
+    }
+  },
+
+  async editForm(name) {
+    try {
+      const d = await API.get(`/api/v1/templates/${encodeURIComponent(name)}`);
+      $('t-name').value = d.name;
+      $('t-name').readOnly = true;
+      $('t-channel').value = (d.channels || [d.channel])[0] || 'email';
+      $('t-subject').value = d.subject || '';
+      $('t-body').value = d.body;
+      $('t-vars').value = (d.variables || []).join(', ');
+      $('t-update-btn').style.display = 'inline-block';
+      document.querySelector('.form-section:has(#t-name)').scrollIntoView({ behavior: 'smooth' });
+    } catch(e) {
+      alert('Failed to load template: ' + e.message);
+    }
+  },
+
+  async update() {
+    const name    = $('t-name').value.trim();
+    const subject = $('t-subject').value.trim();
+    const body    = $('t-body').value.trim();
+
+    if (!name || !body) { alert('Name and body are required'); return; }
+
+    try {
+      const d = await API.patch(`/api/v1/templates/${encodeURIComponent(name)}`, { subject: subject || null, body });
+      showResult($('tmpl-result'), d, !d.error);
+      if (!d.error) {
+        ['t-name','t-subject','t-body','t-vars','t-channel'].forEach(id => {
+          const el = $(id);
+          if (el) { el.value = el.tagName === 'SELECT' ? 'email' : ''; el.readOnly = false; }
+        });
+        this.list(0);
+      }
+    } catch(e) {
+      showResult($('tmpl-result'), { error: e.message }, false);
+    }
+  },
+
+  async delete(name) {
+    try {
+      const d = await API.del(`/api/v1/templates/${encodeURIComponent(name)}`);
+      showResult($('tmpl-result'), d, !d.error);
+      if (!d.error) this.list(0);
+    } catch(e) {
+      alert('Failed to delete: ' + e.message);
     }
   },
 };
