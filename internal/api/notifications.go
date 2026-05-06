@@ -118,6 +118,10 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 	recipient := domain.JSONB{
 		"address": req.To,
 	}
+	// For in-app notifications, also set user_id (required by in-app provider)
+	if req.Channel == domain.ChannelInApp {
+		recipient["user_id"] = req.To
+	}
 	if req.RecipientID != "" {
 		recipient["id"] = req.RecipientID
 	}

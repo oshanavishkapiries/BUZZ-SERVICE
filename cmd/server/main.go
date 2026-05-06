@@ -25,6 +25,7 @@ import (
 	"github.com/elight/buzz-service/internal/config"
 	"github.com/elight/buzz-service/internal/domain"
 	"github.com/elight/buzz-service/internal/provider"
+	"github.com/elight/buzz-service/internal/provider/inapp"
 	"github.com/elight/buzz-service/internal/provider/mock"
 	"github.com/elight/buzz-service/internal/queue"
 	"github.com/elight/buzz-service/internal/realtime"
@@ -82,12 +83,12 @@ func main() {
 	gateway.Start()
 	defer gateway.Stop()
 
-	// Initialize providers (mock for now)
+	// Initialize providers
 	providers := map[domain.Channel]provider.Provider{
 		domain.ChannelEmail: mock.NewMockProvider("mock-email", domain.ChannelEmail, appLogger),
 		domain.ChannelSMS:   mock.NewMockProvider("mock-sms", domain.ChannelSMS, appLogger),
 		domain.ChannelPush:  mock.NewMockProvider("mock-push", domain.ChannelPush, appLogger),
-		domain.ChannelInApp: mock.NewMockProvider("mock-inapp", domain.ChannelInApp, appLogger),
+		domain.ChannelInApp: inapp.NewInAppProvider(db, redisClient),
 	}
 
 	// Initialize worker
