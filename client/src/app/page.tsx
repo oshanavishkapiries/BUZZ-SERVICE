@@ -78,28 +78,28 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-4">
           <a
             href="/notifications"
-            className="p-6 border border-[var(--border-color)] rounded-lg hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
+            className="p-6 border border-[var(--border-color)] rounded hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
           >
             <div className="font-semibold text-[var(--text-primary)] mb-1">Send Notification</div>
             <div className="text-sm text-[var(--text-secondary)]">Test a single notification</div>
           </a>
           <a
             href="/stream"
-            className="p-6 border border-[var(--border-color)] rounded-lg hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
+            className="p-6 border border-[var(--border-color)] rounded hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
           >
             <div className="font-semibold text-[var(--text-primary)] mb-1">Live Stream</div>
             <div className="text-sm text-[var(--text-secondary)]">Watch real-time events</div>
           </a>
           <a
             href="/templates"
-            className="p-6 border border-[var(--border-color)] rounded-lg hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
+            className="p-6 border border-[var(--border-color)] rounded hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
           >
             <div className="font-semibold text-[var(--text-primary)] mb-1">Templates</div>
             <div className="text-sm text-[var(--text-secondary)]">Create and manage templates</div>
           </a>
           <a
             href="/batches"
-            className="p-6 border border-[var(--border-color)] rounded-lg hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
+            className="p-6 border border-[var(--border-color)] rounded hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
           >
             <div className="font-semibold text-[var(--text-primary)] mb-1">Batch Jobs</div>
             <div className="text-sm text-[var(--text-secondary)]">Send bulk notifications</div>

@@ -74,7 +74,7 @@ export default function SettingsPage() {
         </button>
 
         {saved && (
-          <div className="border border-green-400 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg">
+          <div className="border border-green-400 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-3 rounded">
             Settings saved successfully!
           </div>
         )}

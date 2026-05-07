@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { InboxEntry } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 export default function InboxPage() {
   const [entries, setEntries] = useState<InboxEntry[]>([]);
@@ -68,24 +70,22 @@ export default function InboxPage() {
           </p>
         </div>
         {unreadCount > 0 && (
-          <button onClick={handleMarkAllRead} className="btn-primary">
-            Mark All as Read
-          </button>
+          <Button onClick={handleMarkAllRead}>Mark All as Read</Button>
         )}
       </div>
 
       {error && (
-        <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+        <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3" style={{ borderRadius: '0.25rem' }}>
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="card p-6 text-center">Loading...</div>
+        <Card className="p-6 text-center">Loading...</Card>
       ) : entries.length === 0 ? (
-        <div className="card p-6 text-center text-[var(--text-secondary)]">No messages</div>
+        <Card className="p-6 text-center text-[var(--text-secondary)]">No messages</Card>
       ) : (
-        <div className="card overflow-hidden">
+        <Card className="overflow-hidden">
           <div className="divide-y divide-[var(--border-color)]">
             {entries.map((entry) => (
               <div key={entry.id} className={`p-4 ${entry.is_read ? '' : 'bg-[var(--accent)] bg-opacity-5'}`}>
@@ -96,13 +96,13 @@ export default function InboxPage() {
                   </div>
                   <div className="flex gap-2">
                     {!entry.is_read && (
-                      <button onClick={() => handleMarkRead(entry.id)} className="btn-secondary text-xs px-2 py-1">
+                      <Button size="sm" variant="secondary" onClick={() => handleMarkRead(entry.id)}>
                         Read
-                      </button>
+                      </Button>
                     )}
-                    <button onClick={() => handleDelete(entry.id)} className="btn-secondary text-xs px-2 py-1 text-red-600">
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(entry.id)}>
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <p className="text-xs text-[var(--text-secondary)]">
@@ -111,7 +111,7 @@ export default function InboxPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

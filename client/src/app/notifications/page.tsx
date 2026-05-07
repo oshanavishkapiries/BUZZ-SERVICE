@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { Channel, Priority, Notification } from '@/lib/types';
 import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card } from '@/components/ui/card';
 
 export default function NotificationsPage() {
   const [tab, setTab] = useState<'send' | 'list'>('send');
@@ -110,107 +116,108 @@ export default function NotificationsPage() {
 
       {/* Send Tab */}
       {tab === 'send' && (
-        <div className="card p-6 max-w-2xl">
+        <Card className="p-6 max-w-2xl">
           <form onSubmit={handleSend} className="space-y-4">
             <div>
-              <label className="label-base">Recipient</label>
-              <input
+              <Label htmlFor="to">Recipient</Label>
+              <Input
+                id="to"
                 type="text"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 placeholder="user@example.com or phone number or user ID"
-                className="input-base w-full mt-1"
+                className="mt-1"
                 required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label-base">Channel</label>
-                <select value={channel} onChange={(e) => setChannel(e.target.value as Channel)} className="input-base w-full mt-1">
+                <Label htmlFor="channel">Channel</Label>
+                <Select id="channel" value={channel} onChange={(e) => setChannel(e.target.value as Channel)} className="mt-1">
                   <option value="email">Email</option>
                   <option value="sms">SMS</option>
                   <option value="push">Push</option>
                   <option value="in_app">In-App</option>
-                </select>
+                </Select>
               </div>
 
               <div>
-                <label className="label-base">Priority</label>
-                <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)} className="input-base w-full mt-1">
+                <Label htmlFor="priority">Priority</Label>
+                <Select id="priority" value={priority} onChange={(e) => setPriority(e.target.value as Priority)} className="mt-1">
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
                   <option value="high">High</option>
                   <option value="urgent">Urgent</option>
-                </select>
+                </Select>
               </div>
             </div>
 
             {['email'].includes(channel) && (
               <div>
-                <label className="label-base">Subject</label>
-                <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Message subject" className="input-base w-full mt-1" />
+                <Label htmlFor="subject">Subject</Label>
+                <Input id="subject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Message subject" className="mt-1" />
               </div>
             )}
 
             <div>
-              <label className="label-base">Body</label>
-              <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message content" className="input-base w-full mt-1 min-h-24" required />
+              <Label htmlFor="body">Body</Label>
+              <Textarea id="body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message content" className="mt-1 min-h-24" required />
             </div>
 
-            <button type="submit" disabled={sending} className="btn-primary w-full">
+            <Button type="submit" disabled={sending} className="w-full">
               {sending ? 'Sending...' : 'Send Notification'}
-            </button>
+            </Button>
 
             {sendError && <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">{sendError}</div>}
 
             {sendResult && (
-              <div className="text-green-600 dark:text-green-400 text-sm border border-green-300 bg-green-50 dark:bg-green-900/20 p-3 rounded">
+              <div className="text-green-600 dark:text-green-400 text-sm border border-green-300 bg-green-50 dark:bg-green-900/20 p-3" style={{ borderRadius: '0.25rem' }}>
                 <strong>Sent!</strong> ID: {sendResult.id} | Status: {sendResult.status}
               </div>
             )}
           </form>
-        </div>
+        </Card>
       )}
 
       {/* List Tab */}
       {tab === 'list' && (
         <div className="space-y-4">
           {listError && (
-            <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+            <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3" style={{ borderRadius: '0.25rem' }}>
               {listError}
             </div>
           )}
 
-          <div className="card p-4 grid grid-cols-2 gap-4">
+          <Card className="p-4 grid grid-cols-2 gap-4">
             <div>
-              <label className="label-base">Filter by Status</label>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input-base w-full mt-1">
+              <Label htmlFor="status-filter">Filter by Status</Label>
+              <Select id="status-filter" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="mt-1">
                 <option value="">All Statuses</option>
                 <option value="queued">Queued</option>
                 <option value="processing">Processing</option>
                 <option value="sent">Sent</option>
                 <option value="delivered">Delivered</option>
                 <option value="failed">Failed</option>
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="label-base">Filter by Channel</label>
-              <select value={filterChannel} onChange={(e) => setFilterChannel(e.target.value)} className="input-base w-full mt-1">
+              <Label htmlFor="channel-filter">Filter by Channel</Label>
+              <Select id="channel-filter" value={filterChannel} onChange={(e) => setFilterChannel(e.target.value)} className="mt-1">
                 <option value="">All Channels</option>
                 <option value="email">Email</option>
                 <option value="sms">SMS</option>
                 <option value="push">Push</option>
                 <option value="in_app">In-App</option>
-              </select>
+              </Select>
             </div>
-          </div>
+          </Card>
 
           {loading ? (
-            <div className="card p-6 text-center text-[var(--text-secondary)]">Loading...</div>
+            <Card className="p-6 text-center text-[var(--text-secondary)]">Loading...</Card>
           ) : (
-            <div className="card overflow-hidden">
+            <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -248,16 +255,16 @@ export default function NotificationsPage() {
 
               {notifications.length > 0 && (
                 <div className="p-4 border-t border-[var(--border-color)] flex justify-between items-center">
-                  <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))} className="btn-secondary">
+                  <Button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))} variant="outline" size="sm">
                     Previous
-                  </button>
+                  </Button>
                   <span className="text-sm text-[var(--text-secondary)]">Offset: {offset}</span>
-                  <button onClick={() => setOffset(offset + limit)} className="btn-secondary">
+                  <Button onClick={() => setOffset(offset + limit)} variant="outline" size="sm">
                     Next
-                  </button>
+                  </Button>
                 </div>
               )}
-            </div>
+            </Card>
           )}
         </div>
       )}

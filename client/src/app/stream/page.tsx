@@ -56,7 +56,7 @@ export default function StreamPage() {
           <button onClick={clearEvents} className="btn-secondary">
             Clear
           </button>
-          <label className="flex items-center gap-2 px-3 py-2 text-sm border border-[var(--border-color)] rounded-lg hover:bg-[var(--bg-secondary)] cursor-pointer">
+          <label className="flex items-center gap-2 px-3 py-2 text-sm border border-[var(--border-color)] rounded hover:bg-[var(--bg-secondary)] cursor-pointer">
             <input type="checkbox" checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} />
             Auto-scroll
           </label>

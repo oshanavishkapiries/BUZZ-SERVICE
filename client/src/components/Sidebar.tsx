@@ -32,7 +32,7 @@ export function Sidebar() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 rounded transition-colors ${
                   isActive
                     ? 'bg-[var(--accent)] text-white font-medium'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'

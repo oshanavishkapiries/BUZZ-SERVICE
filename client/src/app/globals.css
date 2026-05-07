@@ -38,7 +38,8 @@
 
 @layer components {
   .card {
-    @apply bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg transition-shadow;
+    @apply bg-[var(--bg-secondary)] border border-[var(--border-color)] transition-shadow;
+    border-radius: 0.25rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
@@ -47,15 +48,18 @@
   }
 
   .btn-primary {
-    @apply px-4 py-2 bg-[var(--accent)] text-white font-medium rounded-lg transition-all hover:bg-[var(--accent-dark)];
+    @apply px-4 py-2 bg-[var(--accent)] text-white font-medium transition-all hover:bg-[var(--accent-dark)];
+    border-radius: 0.25rem;
   }
 
   .btn-secondary {
-    @apply px-4 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] font-medium rounded-lg transition-colors hover:bg-[var(--bg-primary)];
+    @apply px-4 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] font-medium transition-colors hover:bg-[var(--bg-primary)];
+    border-radius: 0.25rem;
   }
 
   .input-base {
-    @apply px-3 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)];
+    @apply px-3 py-2 border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)];
+    border-radius: 0.25rem;
   }
 
   .label-base {
@@ -79,7 +83,7 @@
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-color);
-  border-radius: 4px;
+  border-radius: 0.25rem;
 }
 
 ::-webkit-scrollbar-thumb:hover {
