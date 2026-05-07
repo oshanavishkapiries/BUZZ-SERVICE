@@ -43,17 +43,17 @@ export function NotificationMatrix() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">Notification Status Matrix</h2>
+      <div className="card p-6">
+        <h2 className="text-xl font-bold mb-4 text-[var(--text-primary)]">Notification Status Matrix</h2>
         <div className="animate-pulse flex flex-col space-y-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-10 bg-gray-200 rounded" />
+            <div key={i} className="h-10 bg-[var(--bg-secondary)] rounded" />
           ))}
         </div>
       </div>
@@ -62,12 +62,9 @@ export function NotificationMatrix() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+      <div className="card border-red-400 p-4 text-red-700 dark:text-red-400">
         Error: {error}
-        <button
-          onClick={fetchData}
-          className="ml-2 underline hover:font-semibold"
-        >
+        <button onClick={fetchData} className="ml-2 underline hover:font-semibold">
           Retry
         </button>
       </div>
@@ -75,23 +72,26 @@ export function NotificationMatrix() {
   }
 
   const getColor = (value: number): string => {
-    if (value === 0) return 'bg-gray-100 text-gray-700';
-    if (value < 5) return 'bg-blue-100 text-blue-900';
-    if (value < 20) return 'bg-blue-200 text-blue-900';
-    if (value < 50) return 'bg-blue-300 text-blue-900';
-    return 'bg-blue-400 text-white';
+    if (value === 0) return 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]';
+    if (value < 5) return 'bg-[var(--accent)] text-white opacity-30';
+    if (value < 20) return 'bg-[var(--accent)] text-white opacity-50';
+    if (value < 50) return 'bg-[var(--accent)] text-white opacity-70';
+    return 'bg-[var(--accent)] text-white';
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-bold mb-4">Notification Status Matrix</h2>
+    <div className="card p-6">
+      <h2 className="text-xl font-bold mb-4 text-[var(--text-primary)]">Notification Status Matrix</h2>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr>
-              <th className="text-left py-2 px-4 bg-gray-50 font-semibold">Channel</th>
+            <tr className="border-b border-[var(--border-color)]">
+              <th className="text-left py-3 px-4 font-semibold text-[var(--text-primary)]">Channel</th>
               {statuses.map((status) => (
-                <th key={status} className="text-center py-2 px-4 bg-gray-50 font-semibold capitalize">
+                <th
+                  key={status}
+                  className="text-center py-3 px-4 font-semibold text-[var(--text-primary)] capitalize"
+                >
                   {status}
                 </th>
               ))}
@@ -99,8 +99,8 @@ export function NotificationMatrix() {
           </thead>
           <tbody>
             {channels.map((channel) => (
-              <tr key={channel} className="border-t">
-                <td className="py-3 px-4 font-medium capitalize">{channel}</td>
+              <tr key={channel} className="border-b border-[var(--border-color)] last:border-0">
+                <td className="py-3 px-4 font-medium text-[var(--text-primary)] capitalize">{channel}</td>
                 {statuses.map((status) => {
                   const count = data[channel]?.[status] || 0;
                   return (
@@ -116,7 +116,7 @@ export function NotificationMatrix() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-gray-500 mt-4">Auto-refreshes every 30 seconds</p>
+      <p className="text-xs text-[var(--text-secondary)] mt-4">Auto-refreshes every 30 seconds</p>
     </div>
   );
 }
