@@ -1,8 +1,6 @@
 package api
 
 import (
-	"fmt"
-
 	"github.com/elight/buzz-service/internal/config"
 	"github.com/elight/buzz-service/internal/queue"
 	"github.com/elight/buzz-service/internal/realtime"
@@ -27,9 +25,6 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 
 	// Public health check
 	app.Get("/health", HealthCheck(db))
-
-	// Admin panel (public, no auth — API key entered in the UI itself)
-	registerPanelRoutes(app)
 
 	// Swagger UI (public documentation)
 	app.Get("/swagger/*", swagger.New(swagger.Config{
@@ -90,16 +85,6 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	batches.Post("/send", RequireScope("batch:send"), batchHandler.SendBulk)
 	batches.Get("/:id", RequireScope("batch:read"), batchHandler.GetBatchStatus)
 	batches.Get("/", RequireScope("batch:read"), batchHandler.ListBatches)
-
-	// Monitoring
-	redisAddr := fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port)
-	inspector := queue.NewInspector(redisAddr, cfg.Redis.Password)
-	monitoringHandler := NewMonitoringHandler(inspector)
-	monitoring := v1.Group("/monitoring")
-	monitoring.Get("/system", RequireScope("monitoring:read"), monitoringHandler.GetSystemMetrics)
-	monitoring.Get("/queues", RequireScope("monitoring:read"), monitoringHandler.ListQueues)
-	monitoring.Get("/queues/:queue", RequireScope("monitoring:read"), monitoringHandler.GetQueueStats)
-	monitoring.Get("/stats", RequireScope("monitoring:read"), monitoringHandler.GetAllQueueStats)
 }
 
 // HealthCheck godoc
