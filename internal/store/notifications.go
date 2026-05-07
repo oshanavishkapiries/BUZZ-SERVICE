@@ -263,6 +263,39 @@ func (r *NotificationRepository) GetPendingRetries(ctx context.Context, limit in
 	return notifications, nil
 }
 
+// MatrixCount holds a count for a channel/status pair
+type MatrixCount struct {
+	Channel string
+	Status  string
+	Count   int64
+}
+
+// GetMatrix returns counts grouped by channel and status in a single query
+func (r *NotificationRepository) GetMatrix(ctx context.Context) ([]MatrixCount, error) {
+	query := `
+		SELECT channel, status, COUNT(*) AS count
+		FROM notifications
+		WHERE deleted_at IS NULL
+		GROUP BY channel, status
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get notification matrix: %w", err)
+	}
+	defer rows.Close()
+
+	var counts []MatrixCount
+	for rows.Next() {
+		var mc MatrixCount
+		if err := rows.Scan(&mc.Channel, &mc.Status, &mc.Count); err != nil {
+			return nil, fmt.Errorf("failed to scan matrix row: %w", err)
+		}
+		counts = append(counts, mc)
+	}
+	return counts, rows.Err()
+}
+
 // Delete soft deletes a notification
 func (r *NotificationRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `

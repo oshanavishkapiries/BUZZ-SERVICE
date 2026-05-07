@@ -14,11 +14,11 @@ import (
 )
 
 type Worker struct {
-	server    *asynq.Server
-	mux       *asynq.ServeMux
-	store     *store.PostgresStore
-	providers map[domain.Channel]provider.Provider
-	logger    zerolog.Logger
+	server   *asynq.Server
+	mux      *asynq.ServeMux
+	store    *store.PostgresStore
+	registry *provider.Registry
+	logger   zerolog.Logger
 }
 
 type WorkerConfig struct {
@@ -31,7 +31,7 @@ type WorkerConfig struct {
 func NewWorker(
 	cfg WorkerConfig,
 	dbStore *store.PostgresStore,
-	providers map[domain.Channel]provider.Provider,
+	registry *provider.Registry,
 	logger zerolog.Logger,
 ) *Worker {
 	// Configure asynq server
@@ -63,11 +63,11 @@ func NewWorker(
 	mux := asynq.NewServeMux()
 
 	w := &Worker{
-		server:    server,
-		mux:       mux,
-		store:     dbStore,
-		providers: providers,
-		logger:    logger,
+		server:   server,
+		mux:      mux,
+		store:    dbStore,
+		registry: registry,
+		logger:   logger,
 	}
 
 	// Register task handlers
@@ -108,15 +108,19 @@ func (w *Worker) HandleNotification(ctx context.Context, task *asynq.Task) error
 		Str("to", recipientAddr).
 		Msg("Processing notification")
 
-	// Get provider for channel
-	providerInstance, ok := w.providers[notification.Channel]
-	if !ok {
-		return fmt.Errorf("no provider configured for channel: %s", notification.Channel)
+	// Resolve provider: use explicitly chosen provider or fall back to default for channel
+	providerName := ""
+	if notification.Provider != nil {
+		providerName = *notification.Provider
+	}
+	providerInstance, err := w.registry.Resolve(notification.Channel, providerName)
+	if err != nil {
+		return fmt.Errorf("no provider available for channel %s: %w", notification.Channel, err)
 	}
 
 	// Attempt delivery
 	startTime := time.Now()
-	err := providerInstance.Send(ctx, &notification)
+	err = providerInstance.Send(ctx, &notification)
 	duration := time.Since(startTime)
 
 	// Update notification status

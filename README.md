@@ -1,23 +1,39 @@
-# Buzz Notification Service (v1.0.0)
-Unified multi-channel notification delivery service supporting email, SMS, push notifications, and in-app messaging.
+```
+ ██████╗ ██╗   ██╗███████╗███████╗
+ ██╔══██╗██║   ██║╚══███╔╝╚══███╔╝
+ ██████╔╝██║   ██║  ███╔╝   ███╔╝
+ ██╔══██╗██║   ██║ ███╔╝   ███╔╝
+ ██████╔╝╚██████╔╝███████╗███████╗
+ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝
 
-## Documentation
+ Buzz Notification Service  |  v1.0.0
+```
 
-- **[OpenAPI Specification](./docs/openapi.yaml)** - Complete API documentation in OpenAPI 3.0.3 format
-  - View with [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/yourgithub/buzz-service/main/docs/openapi.yaml)
-  - View with [Redoc](https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/yourgithub/buzz-service/main/docs/openapi.yaml)
+A unified notification delivery service supporting email, SMS, push, and in-app messaging. Provider credentials are stored in the database — no environment-level secrets per channel.
 
-- **[Integration Examples](./docs/examples/)**
-  - [cURL examples](./docs/examples/curl-examples.sh)
-  - [Python examples](./docs/examples/python-examples.py)
-  - [JavaScript examples](./docs/examples/javascript-examples.js)
+---
 
-## Features
+## Quick Start
 
-- **Multi-channel delivery** - Email, SMS, push notifications, and in-app messaging
-- **Bulk notifications** - Send to multiple recipients via external datasources with progress tracking
-- **Real-time delivery** - Server-Sent Events (SSE) for instant in-app notifications
-- **Template management** - Create and reuse notification templates with variable substitution
-- **Delivery tracking** - Monitor notification status and delivery analytics
-- **Queue monitoring** - Real-time queue statistics and performance monitoring
-- **Request deduplication** - Idempotency keys for reliable bulk operations
+**1. Start infrastructure**
+
+```bash
+docker-compose up -d
+```
+
+**2. Start the API server**
+
+```bash
+# Install air (first time only)
+go install github.com/air-verse/air@latest
+
+air -c .air.toml
+```
+
+**3. Start the client app**
+
+```bash
+cd client
+npm install
+npm run dev
+```

@@ -28,8 +28,16 @@ type APIKeyStore interface {
 // AuthMiddleware validates API key authentication
 func AuthMiddleware(store APIKeyStore) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Extract API key from Authorization header
+		// Extract API key from Authorization header, falling back to query param
+		// for SSE connections (EventSource cannot set custom headers).
+		// Use "token" as the query param name — proxies (e.g. GitHub Codespaces)
+		// intercept and reject requests that put "Authorization" in the query string.
 		auth := c.Get("Authorization")
+		if auth == "" {
+			if t := c.Query("token"); t != "" {
+				auth = "Bearer " + t
+			}
+		}
 		if auth == "" {
 			return c.Status(401).JSON(fiber.Map{
 				"error": "missing authorization header",
@@ -81,6 +89,14 @@ func AuthMiddleware(store APIKeyStore) fiber.Handler {
 		// Store key info in context
 		c.Locals(string(ContextKeyAPIKey), key)
 		c.Locals(string(ContextKeyScopes), key.Scopes)
+
+		// Allow callers to identify the end-user via X-User-ID header or query param.
+		// SSE connections (EventSource) cannot set headers, so fall back to "user_id" query param.
+		userID := c.Get("X-User-ID")
+		if userID == "" {
+			userID = c.Query("user_id")
+		}
+		c.Locals("user_id", userID)
 
 		// Update last used timestamp (async to not block request)
 		go func() {

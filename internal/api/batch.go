@@ -25,8 +25,20 @@ func NewBatchHandler(s *store.PostgresStore, producer *queue.Producer) *BatchHan
 	}
 }
 
-// SendBulk sends a bulk notification
-// POST /api/v1/batches/send
+// SendBulk godoc
+// @Summary      Send bulk notifications
+// @Description  Fetch recipients from a datasource and send notifications using a template
+// @Tags         batches
+// @Accept       json
+// @Produce      json
+// @Param        body  body      SendBulkRequest         true  "Bulk notification payload"
+// @Success      202   {object}  map[string]interface{}  "Batch queued"
+// @Success      200   {object}  map[string]interface{}  "Duplicate — existing batch returned (idempotency)"
+// @Failure      400   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse           "Datasource not found"
+// @Failure      500   {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/batches/send [post]
 func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 	ctx := c.Context()
 
@@ -116,8 +128,18 @@ func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 	})
 }
 
-// GetBatchStatus gets the status of a batch
-// GET /api/v1/batches/:id
+// GetBatchStatus godoc
+// @Summary      Get batch status
+// @Description  Retrieve the processing status and progress of a bulk notification batch
+// @Tags         batches
+// @Produce      json
+// @Param        id   path      string  true  "Batch UUID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/batches/{id} [get]
 func (h *BatchHandler) GetBatchStatus(c *fiber.Ctx) error {
 	ctx := c.Context()
 
@@ -153,8 +175,18 @@ func (h *BatchHandler) GetBatchStatus(c *fiber.Ctx) error {
 	})
 }
 
-// ListBatches lists batches with optional status filter
-// GET /api/v1/batches?status=completed&limit=10&offset=0
+// ListBatches godoc
+// @Summary      List batches
+// @Description  Retrieve a paginated list of bulk notification batches with optional status filter
+// @Tags         batches
+// @Produce      json
+// @Param        status  query     string  false  "Filter by status (pending, processing, completed, failed)"
+// @Param        limit   query     int     false  "Page size max 100 (default 10)"
+// @Param        offset  query     int     false  "Page offset (default 0)"
+// @Success      200     {object}  map[string]interface{}
+// @Failure      500     {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/batches [get]
 func (h *BatchHandler) ListBatches(c *fiber.Ctx) error {
 	ctx := c.Context()
 

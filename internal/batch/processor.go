@@ -50,7 +50,10 @@ func (p *Processor) ProcessBatch(ctx context.Context, batchID uuid.UUID) error {
 	}
 
 	// Fetch datasource
-	ds, err := p.store.GetDatasourceByID(ctx, batch.DatasourceID)
+	if batch.DatasourceID == nil {
+		return p.failBatch(ctx, batchID, "batch has no datasource configured")
+	}
+	ds, err := p.store.GetDatasourceByID(ctx, *batch.DatasourceID)
 	if err != nil {
 		return p.failBatch(ctx, batchID, fmt.Sprintf("failed to fetch datasource: %v", err))
 	}
@@ -77,7 +80,14 @@ func (p *Processor) ProcessBatch(ctx context.Context, batchID uuid.UUID) error {
 	}
 
 	// Create notifications for each recipient (fan-out)
-	for _, recipient := range recipients {
+	for _, r := range recipients {
+		recipient := map[string]interface{}{
+			"id":           r.ID,
+			"name":         r.Name,
+			"email":        r.Email,
+			"phone":        r.Phone,
+			"device_token": r.DeviceToken,
+		}
 		if err := p.createNotificationForRecipient(ctx, batch, recipient); err != nil {
 			// Log error but continue with other recipients
 			fmt.Printf("failed to create notification for recipient: %v\n", err)
@@ -139,7 +149,11 @@ func (p *Processor) renderTemplate(ctx context.Context, templateName string, tem
 	}
 
 	// Render subject
-	subject, err := p.renderTemplateString(tmpl.Subject, mergedData)
+	subjectStr := ""
+	if tmpl.Subject != nil {
+		subjectStr = *tmpl.Subject
+	}
+	subject, err := p.renderTemplateString(subjectStr, mergedData)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to render subject: %w", err)
 	}

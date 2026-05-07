@@ -18,8 +18,16 @@ func NewWebhookHandler(store *store.PostgresStore) *WebhookHandler {
 	return &WebhookHandler{store: store}
 }
 
-// HandleSESWebhook processes Amazon SES notifications via SNS
-// Handles bounce, complaint, and delivery notifications
+// HandleSESWebhook godoc
+// @Summary      Amazon SES webhook
+// @Description  Receive bounce, complaint, and delivery notifications from Amazon SES via SNS
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        body  body      map[string]interface{}  true  "SNS notification payload"
+// @Success      200
+// @Failure      400   {object}  ErrorResponse
+// @Router       /webhooks/ses [post]
 func (h *WebhookHandler) HandleSESWebhook(c *fiber.Ctx) error {
 	var payload map[string]interface{}
 	if err := c.BodyParser(&payload); err != nil {
@@ -178,7 +186,16 @@ func (h *WebhookHandler) handleDelivery(c *fiber.Ctx, message map[string]interfa
 	return c.SendStatus(200)
 }
 
-// HandleGenericWebhook handles generic webhook notifications
+// HandleGenericWebhook godoc
+// @Summary      Generic webhook
+// @Description  Receive and log generic webhook payloads
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        body  body      map[string]interface{}  true  "Webhook payload"
+// @Success      200
+// @Failure      400   {object}  ErrorResponse
+// @Router       /webhooks/generic [post]
 func (h *WebhookHandler) HandleGenericWebhook(c *fiber.Ctx) error {
 	var payload map[string]interface{}
 	if err := c.BodyParser(&payload); err != nil {
@@ -191,14 +208,23 @@ func (h *WebhookHandler) HandleGenericWebhook(c *fiber.Ctx) error {
 	return c.SendStatus(200)
 }
 
-// HandleNotifyLKWebhook processes delivery receipts from NotifyLK
-func (h *WebhookHandler) HandleNotifyLKWebhook(c *fiber.Ctx) error {
+// HandleTextLKWebhook godoc
+// @Summary      Text.lk webhook
+// @Description  Receive SMS delivery receipts from the Text.lk provider
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        body  body      map[string]interface{}  true  "Text.lk delivery receipt"
+// @Success      200
+// @Failure      400   {object}  ErrorResponse
+// @Router       /webhooks/textlk [post]
+func (h *WebhookHandler) HandleTextLKWebhook(c *fiber.Ctx) error {
 	var payload map[string]interface{}
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid payload"})
 	}
 
-	// NotifyLK webhook format: message_id, status (delivered, failed, expired)
+	// Text.lk webhook format: message_id, status (delivered, failed, expired)
 	messageID, ok := payload["message_id"].(string)
 	if !ok {
 		return c.Status(400).JSON(fiber.Map{"error": "missing message_id"})
@@ -209,29 +235,28 @@ func (h *WebhookHandler) HandleNotifyLKWebhook(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "missing status"})
 	}
 
-	// Update notification status based on delivery receipt
 	switch status {
 	case "delivered":
-		// SMS confirmed delivered
 		_ = messageID
-		// In a real implementation:
-		// 1. Query notification by message ID
-		// 2. Update status to delivered
-		// 3. Record delivery timestamp
-
 	case "failed", "expired":
-		// SMS failed to deliver
 		_ = messageID
-		// In a real implementation:
-		// 1. Query notification by message ID
-		// 2. Update status to failed
-		// 3. Record error reason
 	}
 
 	return c.SendStatus(200)
 }
 
-// HandleTwilioWebhook processes Twilio status callbacks
+// HandleTwilioWebhook godoc
+// @Summary      Twilio webhook
+// @Description  Receive SMS status callbacks from Twilio (form-encoded payload)
+// @Tags         webhooks
+// @Accept       application/x-www-form-urlencoded
+// @Produce      json
+// @Param        MessageSid     formData  string  true   "Twilio message SID"
+// @Param        MessageStatus  formData  string  true   "Delivery status"
+// @Param        ErrorCode      formData  string  false  "Error code (if failed)"
+// @Success      200
+// @Failure      400   {object}  ErrorResponse
+// @Router       /webhooks/twilio [post]
 func (h *WebhookHandler) HandleTwilioWebhook(c *fiber.Ctx) error {
 	// Twilio sends status callbacks as form data
 	messageSID := c.FormValue("MessageSid")

@@ -1,9 +1,8 @@
 package api
 
 import (
-	"fmt"
-
 	"github.com/elight/buzz-service/internal/config"
+	"github.com/elight/buzz-service/internal/provider"
 	"github.com/elight/buzz-service/internal/queue"
 	"github.com/elight/buzz-service/internal/realtime"
 	"github.com/elight/buzz-service/internal/store"
@@ -11,27 +10,33 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	swagger "github.com/gofiber/swagger"
 )
 
-func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Producer, cfg *config.Config, gateway *realtime.Gateway) {
+func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Producer, cfg *config.Config, gateway *realtime.Gateway, registry *provider.Registry) {
 	// Global middleware
 	app.Use(recover.New())
 	app.Use(requestid.New())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowMethods:     "GET,POST,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-User-ID",
 		AllowCredentials: false,
 	}))
 
 	// Public health check
 	app.Get("/health", HealthCheck(db))
 
+	// Swagger UI (public documentation)
+	app.Get("/swagger/*", swagger.New(swagger.Config{
+		DocExpansion: "none",
+	}))
+
 	// Webhook routes (public, no auth required)
 	webhookHandler := NewWebhookHandler(db)
 	webhooks := app.Group("/webhooks")
 	webhooks.Post("/ses", webhookHandler.HandleSESWebhook)
-	webhooks.Post("/notifylk", webhookHandler.HandleNotifyLKWebhook)
+	webhooks.Post("/textlk", webhookHandler.HandleTextLKWebhook)
 	webhooks.Post("/twilio", webhookHandler.HandleTwilioWebhook)
 	webhooks.Post("/generic", webhookHandler.HandleGenericWebhook)
 
@@ -42,10 +47,11 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	v1.Use(AuthMiddleware(db))
 
 	// Notifications
-	notifHandler := NewNotificationHandler(db, producer)
+	notifHandler := NewNotificationHandler(db, producer, gateway)
 	notifications := v1.Group("/notifications")
 	notifications.Post("/", RequireScope("notification:send"), notifHandler.SendNotification)
 	notifications.Get("/", RequireScope("notification:read"), notifHandler.ListNotifications)
+	notifications.Get("/matrix", RequireScope("notification:read"), notifHandler.GetMatrix)
 	notifications.Get("/:id", RequireScope("notification:read"), notifHandler.GetNotification)
 
 	// Templates
@@ -55,6 +61,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	templates.Get("/", RequireScope("template:read"), templateHandler.ListTemplates)
 	templates.Get("/:name", RequireScope("template:read"), templateHandler.GetTemplate)
 	templates.Patch("/:name", RequireScope("template:write"), templateHandler.UpdateTemplate)
+	templates.Delete("/:name", RequireScope("template:write"), templateHandler.DeleteTemplate)
 
 	// Devices (push notification device management)
 	deviceHandler := NewDeviceHandler(db)
@@ -73,6 +80,22 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 
 	// Real-time notifications (SSE stream)
 	v1.Get("/stream", gateway.HandleSSEConnection)
+	v1.Get("/stream/stats", func(c *fiber.Ctx) error {
+		stats := gateway.GetStats()
+		return c.JSON(fiber.Map{
+			"online_users":      stats["total_users"],
+			"total_connections": stats["total_connections"],
+		})
+	})
+
+	// Datasources (external API registrations for batch jobs)
+	datasourceHandler := NewDatasourceHandler(db)
+	datasources := v1.Group("/datasources")
+	datasources.Post("/", RequireScope("batch:send"), datasourceHandler.CreateDatasource)
+	datasources.Get("/", RequireScope("batch:read"), datasourceHandler.ListDatasources)
+	datasources.Get("/:id", RequireScope("batch:read"), datasourceHandler.GetDatasource)
+	datasources.Patch("/:id", RequireScope("batch:send"), datasourceHandler.UpdateDatasource)
+	datasources.Delete("/:id", RequireScope("batch:send"), datasourceHandler.DeleteDatasource)
 
 	// Batch notifications
 	batchHandler := NewBatchHandler(db, producer)
@@ -81,16 +104,24 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	batches.Get("/:id", RequireScope("batch:read"), batchHandler.GetBatchStatus)
 	batches.Get("/", RequireScope("batch:read"), batchHandler.ListBatches)
 
-	// Monitoring
-	redisAddr := fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port)
-	inspector := queue.NewInspector(redisAddr, cfg.Redis.Password)
-	monitoringHandler := NewMonitoringHandler(inspector)
-	monitoring := v1.Group("/monitoring")
-	monitoring.Get("/queues", RequireScope("monitoring:read"), monitoringHandler.ListQueues)
-	monitoring.Get("/queues/:queue", RequireScope("monitoring:read"), monitoringHandler.GetQueueStats)
-	monitoring.Get("/stats", RequireScope("monitoring:read"), monitoringHandler.GetAllQueueStats)
+	// Provider configs (notification delivery providers)
+	providerHandler := NewProviderHandler(db, registry)
+	providers := v1.Group("/providers")
+	providers.Post("/", RequireScope("notification:send"), providerHandler.CreateProvider)
+	providers.Get("/", RequireScope("notification:read"), providerHandler.ListProviders)
+	providers.Get("/:id", RequireScope("notification:read"), providerHandler.GetProvider)
+	providers.Patch("/:id", RequireScope("notification:send"), providerHandler.UpdateProvider)
+	providers.Delete("/:id", RequireScope("notification:send"), providerHandler.DeleteProvider)
 }
 
+// HealthCheck godoc
+// @Summary      Health check
+// @Description  Returns service health status including database connectivity
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "Service is healthy"
+// @Failure      503  {object}  map[string]interface{}  "Service is unhealthy"
+// @Router       /health [get]
 func HealthCheck(db *store.PostgresStore) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()

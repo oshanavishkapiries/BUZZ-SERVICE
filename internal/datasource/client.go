@@ -168,24 +168,42 @@ func (c *Client) FetchRecipients(
 	return recipients, nil
 }
 
-// FetchRecipientsWithPagination handles paginated endpoints
+// FetchRecipientsWithPagination handles paginated endpoints.
+// Pagination style is read from the endpoint config "pagination_style" key:
+//   - "page"   → sends page=N&per_page=100   (1-based)
+//   - "offset" → sends offset=N&limit=100     (default)
 func (c *Client) FetchRecipientsWithPagination(
 	ctx context.Context,
 	ds *domain.Datasource,
 	endpointName string,
 	params map[string]interface{},
 ) ([]Recipient, error) {
+	const pageSize = 100
+
+	// Determine pagination style from endpoint config
+	paginationStyle := "offset"
+	if endpointConfig, ok := ds.Endpoints[endpointName].(map[string]interface{}); ok {
+		if style, ok := endpointConfig["pagination_style"].(string); ok && style == "page" {
+			paginationStyle = "page"
+		}
+	}
+
 	allRecipients := make([]Recipient, 0)
-	page := 1
-	perPage := 100
+	cursor := 0
 
 	for {
 		paginatedParams := make(map[string]interface{})
 		for k, v := range params {
 			paginatedParams[k] = v
 		}
-		paginatedParams["page"] = page
-		paginatedParams["per_page"] = perPage
+
+		if paginationStyle == "page" {
+			paginatedParams["page"] = cursor + 1
+			paginatedParams["per_page"] = pageSize
+		} else {
+			paginatedParams["offset"] = cursor
+			paginatedParams["limit"] = pageSize
+		}
 
 		recipients, err := c.FetchRecipients(ctx, ds, endpointName, paginatedParams)
 		if err != nil {
@@ -198,11 +216,11 @@ func (c *Client) FetchRecipientsWithPagination(
 
 		allRecipients = append(allRecipients, recipients...)
 
-		if len(recipients) < perPage {
+		if len(recipients) < pageSize {
 			break
 		}
 
-		page++
+		cursor += pageSize
 	}
 
 	return allRecipients, nil

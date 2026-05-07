@@ -33,10 +33,9 @@ type SMSConfig struct {
 	DefaultSenderID       string
 }
 
-// NotifyLKConfig contains NotifyLK-specific configuration
-type NotifyLKConfig struct {
-	UserID   string
-	APIKey   string
+// TextLKConfig contains Text.lk-specific configuration
+type TextLKConfig struct {
+	APIToken string
 	SenderID string
 }
 

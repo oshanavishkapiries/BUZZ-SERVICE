@@ -12,21 +12,19 @@ import (
 	"github.com/elight/buzz-service/internal/domain"
 )
 
-// NotifyLKProvider implements SMSProvider for NotifyLK (Sri Lanka)
-type NotifyLKProvider struct {
+// TextLKProvider implements SMSProvider for Text.lk (Sri Lanka)
+type TextLKProvider struct {
 	apiURL   string
-	userID   string
-	apiKey   string
+	apiToken string
 	senderID string
 	client   *http.Client
 }
 
-// NewNotifyLKProvider creates a new NotifyLK SMS provider
-func NewNotifyLKProvider(cfg NotifyLKConfig) *NotifyLKProvider {
-	return &NotifyLKProvider{
-		apiURL:   "https://app.notify.lk/api/v1/send",
-		userID:   cfg.UserID,
-		apiKey:   cfg.APIKey,
+// NewTextLKProvider creates a new Text.lk SMS provider
+func NewTextLKProvider(cfg TextLKConfig) *TextLKProvider {
+	return &TextLKProvider{
+		apiURL:   "https://app.text.lk/api/http/sms/send",
+		apiToken: cfg.APIToken,
 		senderID: cfg.SenderID,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
@@ -34,8 +32,8 @@ func NewNotifyLKProvider(cfg NotifyLKConfig) *NotifyLKProvider {
 	}
 }
 
-// Send delivers a notification via SMS using NotifyLK
-func (p *NotifyLKProvider) Send(ctx context.Context, notification *domain.Notification) error {
+// Send delivers a notification via SMS using Text.lk
+func (p *TextLKProvider) Send(ctx context.Context, notification *domain.Notification) error {
 	msg, err := NotificationToSMSMessage(notification, p.senderID)
 	if err != nil {
 		return fmt.Errorf("failed to convert notification to SMS: %w", err)
@@ -44,14 +42,18 @@ func (p *NotifyLKProvider) Send(ctx context.Context, notification *domain.Notifi
 	return p.SendSMS(ctx, msg)
 }
 
-// SendSMS sends an SMS via NotifyLK API
-func (p *NotifyLKProvider) SendSMS(ctx context.Context, msg *SMSMessage) error {
-	// NotifyLK API request format
+// SendSMS sends an SMS via Text.lk API
+func (p *TextLKProvider) SendSMS(ctx context.Context, msg *SMSMessage) error {
+	msgType := "plain"
+	if msg.IsUnicode {
+		msgType = "unicode"
+	}
+
 	payload := map[string]interface{}{
-		"user_id":   p.userID,
-		"api_key":   p.apiKey,
+		"api_token": p.apiToken,
+		"recipient": msg.To,
 		"sender_id": msg.From,
-		"to":        msg.To,
+		"type":      msgType,
 		"message":   msg.Body,
 	}
 
@@ -66,6 +68,7 @@ func (p *NotifyLKProvider) SendSMS(ctx context.Context, msg *SMSMessage) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := p.client.Do(req)
 	if err != nil {
@@ -79,37 +82,32 @@ func (p *NotifyLKProvider) SendSMS(ctx context.Context, msg *SMSMessage) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("NotifyLK API error (status %d): %s", resp.StatusCode, string(body))
+		return fmt.Errorf("Text.lk API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	// Parse response
 	var result map[string]interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		return fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	// Check for errors in response
 	if status, ok := result["status"].(string); ok && status != "success" {
-		errorMsg := result["error"]
-		return fmt.Errorf("NotifyLK error: %v", errorMsg)
+		return fmt.Errorf("Text.lk error: %v", result["message"])
 	}
 
-	// Success - result["data"] contains message_id for tracking
 	return nil
 }
 
 // Name returns the provider name
-func (p *NotifyLKProvider) Name() string {
-	return "notifylk"
+func (p *TextLKProvider) Name() string {
+	return "textlk"
 }
 
 // SupportsChannel checks if the provider supports a given channel
-func (p *NotifyLKProvider) SupportsChannel(channel domain.Channel) bool {
+func (p *TextLKProvider) SupportsChannel(channel domain.Channel) bool {
 	return channel == domain.ChannelSMS
 }
 
 // SupportsCountry checks if the provider supports a given country code
-func (p *NotifyLKProvider) SupportsCountry(countryCode string) bool {
-	// Sri Lanka country code
+func (p *TextLKProvider) SupportsCountry(countryCode string) bool {
 	return countryCode == "94"
 }

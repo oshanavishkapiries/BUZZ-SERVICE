@@ -8,6 +8,37 @@ import (
 	"github.com/elight/buzz-service/internal/domain"
 )
 
+// CreateProviderRequest represents the request body for creating a provider config
+type CreateProviderRequest struct {
+	Name      string                 `json:"name"`
+	Channel   domain.Channel         `json:"channel"`
+	Provider  string                 `json:"provider"`
+	Config    map[string]interface{} `json:"config"`
+	IsDefault bool                   `json:"is_default,omitempty"`
+}
+
+// Validate validates the create provider request
+func (r *CreateProviderRequest) Validate() error {
+	if r.Name == "" {
+		return fmt.Errorf("'name' is required")
+	}
+	if !isValidChannel(r.Channel) {
+		return fmt.Errorf("invalid channel: %s (must be one of: email, sms, push, in_app)", r.Channel)
+	}
+	if r.Provider == "" {
+		return fmt.Errorf("'provider' is required (e.g. ses, smtp, twilio, notifylk, fcm)")
+	}
+	return nil
+}
+
+// UpdateProviderRequest represents the request body for updating a provider config
+type UpdateProviderRequest struct {
+	Name      *string                `json:"name,omitempty"`
+	Config    map[string]interface{} `json:"config,omitempty"`
+	IsDefault *bool                  `json:"is_default,omitempty"`
+	IsActive  *bool                  `json:"is_active,omitempty"`
+}
+
 var (
 	// RFC 5322 compliant email regex (simplified)
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
@@ -22,6 +53,7 @@ type SendNotificationRequest struct {
 	To             string                 `json:"to"`
 	Channel        domain.Channel         `json:"channel"`
 	Priority       domain.Priority        `json:"priority,omitempty"`
+	Provider       string                 `json:"provider,omitempty"`
 	Template       string                 `json:"template,omitempty"`
 	Subject        string                 `json:"subject,omitempty"`
 	Body           string                 `json:"body,omitempty"`
@@ -128,11 +160,29 @@ func validateToAddress(to string, channel domain.Channel) error {
 
 // CreateTemplateRequest represents the request body for creating a template
 type CreateTemplateRequest struct {
-	Name     string                 `json:"name"`
-	Channel  domain.Channel         `json:"channel"`
-	Subject  string                 `json:"subject,omitempty"`
-	Body     string                 `json:"body"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Name      string                 `json:"name"`
+	Channels  []string               `json:"channels,omitempty"`  // preferred: multi-channel
+	Channel   domain.Channel         `json:"channel,omitempty"`   // legacy: single channel
+	Subject   string                 `json:"subject,omitempty"`
+	Body      string                 `json:"body"`
+	Variables []string               `json:"variables,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ResolvedChannels returns the effective channels list, merging Channel + Channels fields.
+func (r *CreateTemplateRequest) ResolvedChannels() []string {
+	seen := map[string]bool{}
+	var result []string
+	for _, ch := range r.Channels {
+		if !seen[ch] {
+			seen[ch] = true
+			result = append(result, ch)
+		}
+	}
+	if r.Channel != "" && !seen[string(r.Channel)] {
+		result = append(result, string(r.Channel))
+	}
+	return result
 }
 
 // Validate validates the create template request
@@ -140,18 +190,22 @@ func (r *CreateTemplateRequest) Validate() error {
 	if r.Name == "" {
 		return fmt.Errorf("'name' field is required")
 	}
-
 	if r.Body == "" {
 		return fmt.Errorf("'body' field is required")
 	}
 
-	if r.Channel != "" && !isValidChannel(r.Channel) {
-		return fmt.Errorf("invalid channel: %s", r.Channel)
+	channels := r.ResolvedChannels()
+	for _, ch := range channels {
+		if !isValidChannel(domain.Channel(ch)) {
+			return fmt.Errorf("invalid channel: %s (must be one of: email, sms, push, in_app)", ch)
+		}
 	}
 
-	// Email templates should have a subject
-	if r.Channel == domain.ChannelEmail && r.Subject == "" {
-		return fmt.Errorf("'subject' is required for email templates")
+	// Email templates need a subject
+	for _, ch := range channels {
+		if ch == string(domain.ChannelEmail) && r.Subject == "" {
+			return fmt.Errorf("'subject' is required for email templates")
+		}
 	}
 
 	return nil
@@ -159,8 +213,57 @@ func (r *CreateTemplateRequest) Validate() error {
 
 // UpdateTemplateRequest represents the request body for updating a template
 type UpdateTemplateRequest struct {
-	Subject  *string                 `json:"subject,omitempty"`
-	Body     *string                 `json:"body,omitempty"`
-	Metadata map[string]interface{}  `json:"metadata,omitempty"`
-	Active   *bool                   `json:"active,omitempty"`
+	Channels []string               `json:"channels,omitempty"`
+	Subject  *string                `json:"subject,omitempty"`
+	Body     *string                `json:"body,omitempty"`
+	Variables []string              `json:"variables,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Active   *bool                  `json:"active,omitempty"`
+}
+
+// RegisterDeviceRequest represents the request body for registering a device
+type RegisterDeviceRequest struct {
+	UserID   string `json:"user_id"  example:"user-123"`
+	Token    string `json:"token"    example:"fcm-token-abc123"`
+	Platform string `json:"platform" example:"android" enums:"android,ios,web"`
+}
+
+// SendBulkRequest represents the request body for sending a bulk notification
+type SendBulkRequest struct {
+	DatasourceName string                 `json:"datasource_name"  example:"crm"`
+	EndpointName   string                 `json:"endpoint_name"    example:"active_users"`
+	EndpointParams map[string]interface{} `json:"endpoint_params,omitempty"`
+	TemplateName   string                 `json:"template_name"    example:"welcome_email"`
+	TemplateData   map[string]interface{} `json:"template_data,omitempty"`
+	Channel        domain.Channel         `json:"channel"          example:"email"`
+	Priority       domain.Priority        `json:"priority,omitempty" example:"normal"`
+	IdempotencyKey string                 `json:"idempotency_key,omitempty"`
+}
+
+// CreateDatasourceRequest represents the request body for registering a datasource
+type CreateDatasourceRequest struct {
+	Name       string                 `json:"name"`
+	BaseURL    string                 `json:"base_url"`
+	AuthType   string                 `json:"auth_type,omitempty"` // bearer, basic, api_key, ""
+	AuthConfig map[string]interface{} `json:"auth_config,omitempty"`
+	Endpoints  map[string]interface{} `json:"endpoints,omitempty"`
+}
+
+// UpdateDatasourceRequest represents the request body for updating a datasource
+type UpdateDatasourceRequest struct {
+	BaseURL    *string                `json:"base_url,omitempty"`
+	AuthType   *string                `json:"auth_type,omitempty"`
+	AuthConfig map[string]interface{} `json:"auth_config,omitempty"`
+	Endpoints  map[string]interface{} `json:"endpoints,omitempty"`
+}
+
+// ErrorResponse is the standard error response body
+type ErrorResponse struct {
+	Error   string `json:"error"             example:"validation failed"`
+	Details string `json:"details,omitempty" example:"'to' field is required"`
+}
+
+// MessageResponse is a generic success message response
+type MessageResponse struct {
+	Message string `json:"message" example:"operation completed successfully"`
 }

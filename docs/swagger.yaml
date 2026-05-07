@@ -1,0 +1,1028 @@
+basePath: /
+definitions:
+  api.CreateTemplateRequest:
+    properties:
+      body:
+        type: string
+      channel:
+        $ref: '#/definitions/domain.Channel'
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      subject:
+        type: string
+    type: object
+  api.ErrorResponse:
+    properties:
+      details:
+        example: '''to'' field is required'
+        type: string
+      error:
+        example: validation failed
+        type: string
+    type: object
+  api.MessageResponse:
+    properties:
+      message:
+        example: operation completed successfully
+        type: string
+    type: object
+  api.RegisterDeviceRequest:
+    properties:
+      platform:
+        enum:
+        - android
+        - ios
+        - web
+        example: android
+        type: string
+      token:
+        example: fcm-token-abc123
+        type: string
+      user_id:
+        example: user-123
+        type: string
+    type: object
+  api.SendBulkRequest:
+    properties:
+      channel:
+        allOf:
+        - $ref: '#/definitions/domain.Channel'
+        example: email
+      datasource_name:
+        example: crm
+        type: string
+      endpoint_name:
+        example: active_users
+        type: string
+      endpoint_params:
+        additionalProperties: true
+        type: object
+      idempotency_key:
+        type: string
+      priority:
+        allOf:
+        - $ref: '#/definitions/domain.Priority'
+        example: normal
+      template_data:
+        additionalProperties: true
+        type: object
+      template_name:
+        example: welcome_email
+        type: string
+    type: object
+  api.SendNotificationRequest:
+    properties:
+      body:
+        type: string
+      channel:
+        $ref: '#/definitions/domain.Channel'
+      data:
+        additionalProperties: true
+        type: object
+      idempotency_key:
+        type: string
+      priority:
+        $ref: '#/definitions/domain.Priority'
+      recipient_id:
+        type: string
+      recipient_name:
+        type: string
+      scheduled_for:
+        type: string
+      subject:
+        type: string
+      template:
+        type: string
+      to:
+        type: string
+    type: object
+  api.UpdateTemplateRequest:
+    properties:
+      active:
+        type: boolean
+      body:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      subject:
+        type: string
+    type: object
+  domain.Channel:
+    enum:
+    - email
+    - sms
+    - push
+    - in_app
+    type: string
+    x-enum-varnames:
+    - ChannelEmail
+    - ChannelSMS
+    - ChannelPush
+    - ChannelInApp
+  domain.JSONB:
+    additionalProperties: true
+    type: object
+  domain.Notification:
+    properties:
+      batch_id:
+        type: string
+      body:
+        type: string
+      channel:
+        $ref: '#/definitions/domain.Channel'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      delivered_at:
+        type: string
+      error_code:
+        type: string
+      error_message:
+        type: string
+      failed_at:
+        type: string
+      html_body:
+        type: string
+      id:
+        type: string
+      max_retries:
+        type: integer
+      metadata:
+        $ref: '#/definitions/domain.JSONB'
+      next_retry_at:
+        type: string
+      priority:
+        $ref: '#/definitions/domain.Priority'
+      provider:
+        type: string
+      provider_message_id:
+        type: string
+      provider_response:
+        $ref: '#/definitions/domain.JSONB'
+      queued_at:
+        type: string
+      recipient:
+        $ref: '#/definitions/domain.JSONB'
+      retry_count:
+        type: integer
+      sent_at:
+        type: string
+      status:
+        $ref: '#/definitions/domain.NotificationStatus'
+      subject:
+        type: string
+      template_id:
+        type: string
+      updated_at:
+        type: string
+      variables:
+        $ref: '#/definitions/domain.JSONB'
+    type: object
+  domain.NotificationStatus:
+    enum:
+    - pending
+    - queued
+    - processing
+    - sent
+    - delivered
+    - failed
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusQueued
+    - StatusProcessing
+    - StatusSent
+    - StatusDelivered
+    - StatusFailed
+    - StatusCancelled
+  domain.Priority:
+    enum:
+    - low
+    - normal
+    - high
+    - urgent
+    type: string
+    x-enum-varnames:
+    - PriorityLow
+    - PriorityNormal
+    - PriorityHigh
+    - PriorityUrgent
+  domain.Template:
+    properties:
+      body:
+        type: string
+      channels:
+        items:
+          type: string
+        type: array
+      config:
+        $ref: '#/definitions/domain.JSONB'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      default_values:
+        $ref: '#/definitions/domain.JSONB'
+      deleted_at:
+        type: string
+      description:
+        type: string
+      html_body:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      subject:
+        type: string
+      updated_at:
+        type: string
+      variables:
+        items:
+          type: string
+        type: array
+    type: object
+info:
+  contact:
+    email: support@yourdomain.com
+    name: API Support
+  description: Unified notification delivery service supporting email, SMS, push notifications,
+    and in-app messaging with bulk sending capabilities.
+  title: Buzz Notification Service API
+  version: 1.0.0
+paths:
+  /api/v1/batches:
+    get:
+      description: Retrieve a paginated list of bulk notification batches with optional
+        status filter
+      parameters:
+      - description: Filter by status (pending, processing, completed, failed)
+        in: query
+        name: status
+        type: string
+      - description: Page size max 100 (default 10)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List batches
+      tags:
+      - batches
+  /api/v1/batches/{id}:
+    get:
+      description: Retrieve the processing status and progress of a bulk notification
+        batch
+      parameters:
+      - description: Batch UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get batch status
+      tags:
+      - batches
+  /api/v1/batches/send:
+    post:
+      consumes:
+      - application/json
+      description: Fetch recipients from a datasource and send notifications using
+        a template
+      parameters:
+      - description: Bulk notification payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.SendBulkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Duplicate — existing batch returned (idempotency)
+          schema:
+            additionalProperties: true
+            type: object
+        "202":
+          description: Batch queued
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Datasource not found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Send bulk notifications
+      tags:
+      - batches
+  /api/v1/devices:
+    get:
+      description: Retrieve all registered device tokens for a user
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List user devices
+      tags:
+      - devices
+  /api/v1/devices/{token}:
+    delete:
+      description: Deactivate a push notification device token
+      parameters:
+      - description: Device token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Unregister a device
+      tags:
+      - devices
+  /api/v1/devices/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a push notification device token for a user
+      parameters:
+      - description: Device registration payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.RegisterDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Register a device
+      tags:
+      - devices
+  /api/v1/inbox:
+    get:
+      description: Retrieve the authenticated user's in-app notification inbox
+      parameters:
+      - description: Return only unread notifications (default false)
+        in: query
+        name: unread
+        type: boolean
+      - description: Page size (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get inbox
+      tags:
+      - inbox
+  /api/v1/inbox/{id}:
+    delete:
+      description: Permanently delete a notification from the authenticated user's
+        inbox
+      parameters:
+      - description: Inbox entry UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete inbox notification
+      tags:
+      - inbox
+  /api/v1/inbox/{id}/read:
+    patch:
+      description: Mark a single inbox notification as read
+      parameters:
+      - description: Inbox entry UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Mark as read
+      tags:
+      - inbox
+  /api/v1/inbox/read-all:
+    post:
+      description: Mark all inbox notifications as read for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Mark all as read
+      tags:
+      - inbox
+  /api/v1/monitoring/queues:
+    get:
+      description: Retrieve the names of all active notification queues
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List queues
+      tags:
+      - monitoring
+  /api/v1/monitoring/queues/{queue}:
+    get:
+      description: Retrieve processing statistics for a specific queue
+      parameters:
+      - description: Queue name
+        in: path
+        name: queue
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get queue stats
+      tags:
+      - monitoring
+  /api/v1/monitoring/stats:
+    get:
+      description: Retrieve aggregated processing statistics across all notification
+        queues
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get all queue stats
+      tags:
+      - monitoring
+  /api/v1/notifications:
+    get:
+      description: Retrieve a paginated list of notifications with optional filters
+      parameters:
+      - description: Filter by status (queued, sent, delivered, failed)
+        in: query
+        name: status
+        type: string
+      - description: Filter by channel (email, sms, push, in_app)
+        in: query
+        name: channel
+        type: string
+      - description: Filter by recipient ID
+        in: query
+        name: recipient_id
+        type: string
+      - description: Page size 1-100 (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List notifications
+      tags:
+      - notifications
+    post:
+      consumes:
+      - application/json
+      description: Queue a notification for delivery via the specified channel (email,
+        sms, push, in_app)
+      parameters:
+      - description: Notification payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.SendNotificationRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Notification queued
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Template not found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Send a notification
+      tags:
+      - notifications
+  /api/v1/notifications/{id}:
+    get:
+      description: Retrieve a single notification by its UUID
+      parameters:
+      - description: Notification UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Notification'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get a notification
+      tags:
+      - notifications
+  /api/v1/templates:
+    get:
+      description: Retrieve a paginated list of notification templates with optional
+        filters
+      parameters:
+      - description: Filter by channel (email, sms, push, in_app)
+        in: query
+        name: channel
+        type: string
+      - description: Filter by active status (default true)
+        in: query
+        name: active
+        type: boolean
+      - description: Page size (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List templates
+      tags:
+      - templates
+    post:
+      consumes:
+      - application/json
+      description: Create a reusable notification template with optional variable
+        placeholders
+      parameters:
+      - description: Template definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Template'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a template
+      tags:
+      - templates
+  /api/v1/templates/{name}:
+    get:
+      description: Retrieve a template by name
+      parameters:
+      - description: Template name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Template'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get a template
+      tags:
+      - templates
+    patch:
+      consumes:
+      - application/json
+      description: Partially update an existing template's subject, body, metadata,
+        or active status
+      parameters:
+      - description: Template name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update a template
+      tags:
+      - templates
+  /health:
+    get:
+      description: Returns service health status including database connectivity
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is healthy
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: Service is unhealthy
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /webhooks/generic:
+    post:
+      consumes:
+      - application/json
+      description: Receive and log generic webhook payloads
+      parameters:
+      - description: Webhook payload
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Generic webhook
+      tags:
+      - webhooks
+  /webhooks/notifylk:
+    post:
+      consumes:
+      - application/json
+      description: Receive SMS delivery receipts from the NotifyLK provider
+      parameters:
+      - description: NotifyLK delivery receipt
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: NotifyLK webhook
+      tags:
+      - webhooks
+  /webhooks/ses:
+    post:
+      consumes:
+      - application/json
+      description: Receive bounce, complaint, and delivery notifications from Amazon
+        SES via SNS
+      parameters:
+      - description: SNS notification payload
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Amazon SES webhook
+      tags:
+      - webhooks
+  /webhooks/twilio:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Receive SMS status callbacks from Twilio (form-encoded payload)
+      parameters:
+      - description: Twilio message SID
+        in: formData
+        name: MessageSid
+        required: true
+        type: string
+      - description: Delivery status
+        in: formData
+        name: MessageStatus
+        required: true
+        type: string
+      - description: Error code (if failed)
+        in: formData
+        name: ErrorCode
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Twilio webhook
+      tags:
+      - webhooks
+securityDefinitions:
+  Bearer:
+    description: API key prefixed with "Bearer ", e.g. "Bearer YOUR_API_KEY"
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
