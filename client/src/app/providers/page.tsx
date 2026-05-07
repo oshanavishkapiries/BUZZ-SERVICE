@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
-import { Zap, Plus, Trash2, Star, RefreshCw } from 'lucide-react';
+import { Zap, Plus, Trash2, Star, RefreshCw, Pencil } from 'lucide-react';
 
 const CHANNELS: Channel[] = ['email', 'sms', 'push', 'in_app'];
 
@@ -67,10 +67,10 @@ const CHANNEL_BADGE: Record<Channel, 'info' | 'success' | 'warning' | 'default'>
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'list' | 'create'>('list');
+  const [tab, setTab] = useState<'list' | 'create' | 'edit'>('list');
   const [listError, setListError] = useState<string | null>(null);
 
-  // Form state
+  // Create form state
   const [name, setName] = useState('');
   const [channel, setChannel] = useState<Channel>('email');
   const [providerType, setProviderType] = useState('ses');
@@ -78,6 +78,15 @@ export default function ProvidersPage() {
   const [isDefault, setIsDefault] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Edit form state
+  const [editingProvider, setEditingProvider] = useState<ProviderConfig | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editConfigRaw, setEditConfigRaw] = useState('{}');
+  const [editIsDefault, setEditIsDefault] = useState(false);
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -147,6 +156,41 @@ export default function ProvidersPage() {
     }
   };
 
+  const openEdit = (p: ProviderConfig) => {
+    setEditingProvider(p);
+    setEditName(p.name);
+    setEditConfigRaw(JSON.stringify(p.config, null, 2));
+    setEditIsDefault(p.is_default);
+    setEditIsActive(p.is_active);
+    setEditError(null);
+    setTab('edit');
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProvider) return;
+    setSaving(true);
+    setEditError(null);
+    try {
+      let config: Record<string, unknown>;
+      try { config = JSON.parse(editConfigRaw); }
+      catch { setEditError('Config is not valid JSON'); setSaving(false); return; }
+
+      await api.updateProvider(editingProvider.id, {
+        name: editName,
+        config,
+        is_default: editIsDefault,
+        is_active: editIsActive,
+      });
+      setTab('list');
+      await load();
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Failed to update provider');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const toggleDefault = async (p: ProviderConfig) => {
     try {
       await api.updateProvider(p.id, { is_default: !p.is_default });
@@ -179,11 +223,97 @@ export default function ProvidersPage() {
             Manage delivery provider configurations for email, SMS, and push
           </p>
         </div>
-        <Button onClick={() => setTab(tab === 'create' ? 'list' : 'create')}>
-          <Plus size={14} />
-          {tab === 'create' ? 'Back to list' : 'Add Provider'}
-        </Button>
+        {tab === 'list' ? (
+          <Button onClick={() => setTab('create')}>
+            <Plus size={14} />
+            Add Provider
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={() => setTab('list')}>
+            Back to list
+          </Button>
+        )}
       </div>
+
+      {tab === 'edit' && editingProvider && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Pencil size={14} className="text-[var(--accent)]" />
+              Edit Provider — <span className="font-mono text-sm">{editingProvider.provider}</span>
+              <Badge variant="secondary">{editingProvider.channel}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleEdit} className="space-y-5 max-w-2xl">
+              <div>
+                <Label htmlFor="ename">Name</Label>
+                <Input
+                  id="ename"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-[var(--text-muted)] mt-1">
+                  Channel and provider type cannot be changed after creation
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="econfig">
+                  Configuration <span className="text-[var(--text-muted)] font-normal">(JSON)</span>
+                </Label>
+                <Textarea
+                  id="econfig"
+                  value={editConfigRaw}
+                  onChange={e => setEditConfigRaw(e.target.value)}
+                  rows={12}
+                  className="font-mono text-xs"
+                  spellCheck={false}
+                />
+              </div>
+
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="editIsDefault"
+                    checked={editIsDefault}
+                    onChange={e => setEditIsDefault(e.target.checked)}
+                    className="w-4 h-4 rounded border-[var(--border-color)]"
+                  />
+                  <Label htmlFor="editIsDefault" className="cursor-pointer">Default provider</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="editIsActive"
+                    checked={editIsActive}
+                    onChange={e => setEditIsActive(e.target.checked)}
+                    className="w-4 h-4 rounded border-[var(--border-color)]"
+                  />
+                  <Label htmlFor="editIsActive" className="cursor-pointer">Active</Label>
+                </div>
+              </div>
+
+              {editError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{editError}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-3">
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save Changes'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setTab('list')}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {tab === 'create' && (
         <Card>
@@ -370,6 +500,15 @@ export default function ProvidersPage() {
                               className="text-xs"
                             >
                               <RefreshCw size={13} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openEdit(p)}
+                              title="Edit provider"
+                              className="text-xs text-[var(--text-secondary)] hover:text-[var(--accent)]"
+                            >
+                              <Pencil size={13} />
                             </Button>
                             <Button
                               size="sm"
