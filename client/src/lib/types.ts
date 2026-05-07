@@ -1,0 +1,187 @@
+// Enums
+export type Channel = 'email' | 'sms' | 'push' | 'in_app';
+export type Priority = 'low' | 'normal' | 'high' | 'urgent';
+export type NotificationStatus = 'pending' | 'queued' | 'processing' | 'sent' | 'delivered' | 'failed' | 'cancelled';
+export type BatchStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'fetching' | 'queued' | 'delivering';
+export type Platform = 'ios' | 'android' | 'web';
+export type DatasourceType = 'google_sheets' | 'csv' | 'json' | 'api';
+
+// Notification
+export interface Notification {
+  id: string;
+  batch_id?: string;
+  channel: Channel;
+  priority: Priority;
+  recipient: Record<string, unknown>;
+  subject?: string;
+  body: string;
+  html_body?: string;
+  template_id?: string;
+  variables?: Record<string, unknown>;
+  status: NotificationStatus;
+  provider?: string;
+  provider_message_id?: string;
+  provider_response?: Record<string, unknown>;
+  queued_at?: string;
+  sent_at?: string;
+  delivered_at?: string;
+  failed_at?: string;
+  retry_count: number;
+  max_retries: number;
+  next_retry_at?: string;
+  error_message?: string;
+  error_code?: string;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  deleted_at?: string;
+}
+
+// Template
+export interface Template {
+  id: string;
+  name: string;
+  description?: string;
+  channels: Channel[];
+  subject?: string;
+  body: string;
+  html_body?: string;
+  variables: string[];
+  default_values?: Record<string, string>;
+  config?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  is_active: boolean;
+  deleted_at?: string;
+}
+
+// Inbox Entry
+export interface InboxEntry {
+  id: string;
+  user_id: string;
+  notification_id?: string;
+  title: string;
+  body: string;
+  type?: string;
+  action_url?: string;
+  action_text?: string;
+  icon_url?: string;
+  image_url?: string;
+  is_read: boolean;
+  is_archived: boolean;
+  read_at?: string;
+  archived_at?: string;
+  expires_at?: string;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+// Device Token
+export interface DeviceToken {
+  id: string;
+  user_id: string;
+  token: string;
+  platform: Platform;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deactivated_at?: string;
+}
+
+// Batch
+export interface Batch {
+  id: string;
+  datasource_id?: string;
+  datasource_name: string;
+  endpoint_name: string;
+  template_name: string;
+  channel: Channel;
+  priority: Priority;
+  status: BatchStatus;
+  total_count: number;
+  sent_count: number;
+  failed_count: number;
+  skipped_count: number;
+  error_message?: string;
+  created_at: string;
+  completed_at?: string;
+}
+
+// API Request shapes
+export interface SendNotificationRequest {
+  to: string;
+  channel: Channel;
+  priority?: Priority;
+  template?: string;
+  subject?: string;
+  body?: string;
+  data?: Record<string, unknown>;
+  recipient_id?: string;
+  recipient_name?: string;
+  idempotency_key?: string;
+  scheduled_for?: string;
+}
+
+export interface CreateTemplateRequest {
+  name: string;
+  channel?: Channel;
+  subject?: string;
+  body: string;
+  variables?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateTemplateRequest {
+  subject?: string;
+  body?: string;
+  metadata?: Record<string, unknown>;
+  active?: boolean;
+}
+
+export interface RegisterDeviceRequest {
+  user_id: string;
+  token: string;
+  platform: Platform;
+}
+
+export interface SendBulkRequest {
+  datasource_name: string;
+  endpoint_name: string;
+  endpoint_params?: Record<string, unknown>;
+  template_name: string;
+  template_data?: Record<string, unknown>;
+  channel: Channel;
+  priority?: Priority;
+  idempotency_key?: string;
+}
+
+// API Response shapes
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
+export interface HealthResponse {
+  status: 'healthy' | 'unhealthy';
+  version: string;
+  checks: {
+    database: 'up' | 'down';
+  };
+}
+
+export interface SSEEvent {
+  type: 'connected' | 'notification' | 'error' | 'disconnected';
+  timestamp: string;
+  data?: Record<string, unknown>;
+  error?: string;
+}
