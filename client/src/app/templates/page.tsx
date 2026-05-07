@@ -5,13 +5,22 @@ import { api } from '@/lib/api';
 import { Template, Channel } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Plus, Trash2, Tag } from 'lucide-react';
+import { FileText, Plus, Trash2, Tag, Eye } from 'lucide-react';
+
+const ALL_CHANNELS: Channel[] = ['email', 'sms', 'push', 'in_app'];
+const CHANNEL_LABELS: Record<Channel, string> = {
+  email: 'Email', sms: 'SMS', push: 'Push', in_app: 'In-App',
+};
+
+// Detect {{variable}} placeholders in text
+function extractVars(text: string): string[] {
+  return [...new Set([...text.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]))];
+}
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -19,13 +28,15 @@ export default function TemplatesPage() {
   const [tab, setTab] = useState<'list' | 'create'>('list');
   const [listError, setListError] = useState<string | null>(null);
 
+  // Form state
   const [name, setName] = useState('');
-  const [channel, setChannel] = useState<Channel>('email');
+  const [channels, setChannels] = useState<Channel[]>(['email']);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [variables, setVariables] = useState('');
+  const [variablesInput, setVariablesInput] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -43,18 +54,38 @@ export default function TemplatesPage() {
 
   useEffect(() => { load(); }, []);
 
+  const toggleChannel = (ch: Channel) => {
+    setChannels(prev =>
+      prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]
+    );
+  };
+
+  // Auto-detect variables from body + subject text
+  const detectedVars = [...new Set([...extractVars(body), ...extractVars(subject)])];
+  // Merge with manually declared ones
+  const manualVars = variablesInput.split(',').map(v => v.trim()).filter(Boolean);
+  const allVars = [...new Set([...detectedVars, ...manualVars])];
+
+  const needsSubject = channels.includes('email');
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (channels.length === 0) {
+      setCreateError('Select at least one channel');
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     try {
       await api.createTemplate({
-        name, channel,
+        name,
+        channels,
         subject: subject || undefined,
         body,
-        variables: variables.split(',').map(v => v.trim()).filter(Boolean),
+        variables: allVars,
       });
-      setName(''); setSubject(''); setBody(''); setVariables('');
+      setName(''); setSubject(''); setBody(''); setVariablesInput('');
+      setChannels(['email']);
       setTab('list');
       await load();
     } catch (e) {
@@ -64,9 +95,9 @@ export default function TemplatesPage() {
     }
   };
 
-  const del = async (name: string) => {
-    if (!confirm(`Delete template "${name}"?`)) return;
-    try { await api.deleteTemplate(name); await load(); }
+  const del = async (tplName: string) => {
+    if (!confirm(`Delete template "${tplName}"?`)) return;
+    try { await api.deleteTemplate(tplName); await load(); }
     catch (e) { console.error(e); }
   };
 
@@ -75,7 +106,7 @@ export default function TemplatesPage() {
       <div className="page-header flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">Templates</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">Reusable notification templates</p>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">Reusable notification templates with dynamic variables</p>
         </div>
         <Button onClick={() => setTab(tab === 'create' ? 'list' : 'create')}>
           <Plus size={14} />
@@ -83,67 +114,168 @@ export default function TemplatesPage() {
         </Button>
       </div>
 
+      {/* ── CREATE FORM ──────────────────────────────────────────────────────── */}
       {tab === 'create' && (
-        <Card className="max-w-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus size={14} className="text-[var(--accent)]" />
-              New Template
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <Label htmlFor="tname">Template Name</Label>
-                <Input id="tname" value={name} onChange={e => setName(e.target.value)}
-                  placeholder="welcome_email" required />
-              </div>
-              <div>
-                <Label htmlFor="tch">Channel</Label>
-                <Select id="tch" value={channel} onChange={e => setChannel(e.target.value as Channel)}>
-                  <option value="email">Email</option>
-                  <option value="sms">SMS</option>
-                  <option value="push">Push</option>
-                  <option value="in_app">In-App</option>
-                </Select>
-              </div>
-              {channel === 'email' && (
-                <div>
-                  <Label htmlFor="tsubj">Subject</Label>
-                  <Input id="tsubj" value={subject} onChange={e => setSubject(e.target.value)}
-                    placeholder="Welcome {{name}}!" required />
+        <div className="grid grid-cols-5 gap-6">
+          <div className="col-span-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus size={14} className="text-[var(--accent)]" />
+                  New Template
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleCreate} className="space-y-5">
+                  <div>
+                    <Label htmlFor="tname">Template Name</Label>
+                    <Input id="tname" value={name} onChange={e => setName(e.target.value)}
+                      placeholder="welcome_email" required />
+                    <p className="text-xs text-[var(--text-muted)] mt-1">Unique identifier used when sending</p>
+                  </div>
+
+                  {/* Channel checkboxes */}
+                  <div>
+                    <Label>Channels</Label>
+                    <div className="flex gap-2 flex-wrap mt-1">
+                      {ALL_CHANNELS.map(ch => (
+                        <button
+                          key={ch}
+                          type="button"
+                          onClick={() => toggleChannel(ch)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius)] text-xs font-medium border transition-colors ${
+                            channels.includes(ch)
+                              ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+                              : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)] hover:border-[var(--accent)]'
+                          }`}
+                        >
+                          {CHANNEL_LABELS[ch]}
+                        </button>
+                      ))}
+                    </div>
+                    {channels.length === 0 && (
+                      <p className="text-xs text-[var(--destructive)] mt-1">Select at least one channel</p>
+                    )}
+                  </div>
+
+                  {needsSubject && (
+                    <div>
+                      <Label htmlFor="tsubj">Subject</Label>
+                      <Input id="tsubj" value={subject} onChange={e => setSubject(e.target.value)}
+                        placeholder="Welcome {{name}}!" required />
+                      <p className="text-xs text-[var(--text-muted)] mt-1">Required for Email</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="tbody">Body</Label>
+                    <Textarea id="tbody" value={body} onChange={e => setBody(e.target.value)}
+                      placeholder={`Hi {{name}},\n\nWelcome to {{company}}!`}
+                      className="min-h-[120px] font-mono text-xs" required />
+                    <p className="text-xs text-[var(--text-muted)] mt-1">
+                      Use <code className="font-mono">{'{{variable}}'}</code> for dynamic values
+                    </p>
+                  </div>
+
+                  {/* Auto-detected variables */}
+                  {detectedVars.length > 0 && (
+                    <div>
+                      <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1.5">
+                        Auto-detected variables
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {detectedVars.map(v => (
+                          <span key={v} className="flex items-center gap-1 text-[0.68rem] font-mono px-1.5 py-0.5 rounded border border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--accent)]">
+                            <Tag size={9} />{v}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="tvars">Additional Variables (optional)</Label>
+                    <Input id="tvars" value={variablesInput} onChange={e => setVariablesInput(e.target.value)}
+                      placeholder="extra_var, another_var" />
+                    <p className="text-xs text-[var(--text-muted)] mt-1">
+                      Comma-separated. Variables in the body are detected automatically.
+                    </p>
+                  </div>
+
+                  {createError && <Alert variant="destructive"><AlertDescription>{createError}</AlertDescription></Alert>}
+
+                  <Button type="submit" disabled={creating || channels.length === 0} className="w-full">
+                    <FileText size={14} />
+                    {creating ? 'Creating…' : 'Create Template'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Live preview */}
+          <div className="col-span-2">
+            <Card className="sticky top-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Eye size={13} className="text-[var(--accent)]" />
+                    Live Preview
+                  </CardTitle>
                 </div>
-              )}
-              <div>
-                <Label htmlFor="tbody">Body</Label>
-                <Textarea id="tbody" value={body} onChange={e => setBody(e.target.value)}
-                  placeholder="Hi {{name}}, welcome to…" className="min-h-[100px]" required />
-              </div>
-              <div>
-                <Label htmlFor="tvars">Variables (comma-separated)</Label>
-                <Input id="tvars" value={variables} onChange={e => setVariables(e.target.value)}
-                  placeholder="name, company, url" />
-                <p className="text-xs text-[var(--text-muted)] mt-1">These map to <code>{'{{variable}}'}</code> in your template</p>
-              </div>
-              {createError && <Alert variant="destructive"><AlertDescription>{createError}</AlertDescription></Alert>}
-              <Button type="submit" disabled={creating} className="w-full">
-                <FileText size={14} />
-                {creating ? 'Creating…' : 'Create Template'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">Channels</div>
+                  <div className="flex flex-wrap gap-1">
+                    {channels.length === 0
+                      ? <span className="text-xs text-[var(--text-muted)]">None selected</span>
+                      : channels.map(ch => <Badge key={ch} variant="default">{ch}</Badge>)}
+                  </div>
+                </div>
+
+                {(subject || needsSubject) && (
+                  <div>
+                    <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">Subject</div>
+                    <p className="text-sm">{subject || <span className="text-[var(--text-muted)] italic">empty</span>}</p>
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">Body</div>
+                  <pre className="text-xs font-mono whitespace-pre-wrap bg-[var(--bg-secondary)] rounded-[var(--radius)] p-3 leading-relaxed border border-[var(--border-color)] min-h-[60px]">
+                    {body || <span className="text-[var(--text-muted)] italic">empty</span>}
+                  </pre>
+                </div>
+
+                {allVars.length > 0 && (
+                  <div>
+                    <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1.5">
+                      All variables ({allVars.length})
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {allVars.map(v => (
+                        <span key={v} className="flex items-center gap-1 text-[0.68rem] font-mono px-1.5 py-0.5 rounded border border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">
+                          <Tag size={9} />{v}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
 
+      {/* ── TEMPLATE LIST ─────────────────────────────────────────────────────── */}
       {tab === 'list' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText size={14} className="text-[var(--accent)]" />
               Templates
-              {templates.length > 0 && (
-                <Badge variant="secondary">{templates.length}</Badge>
-              )}
+              {templates.length > 0 && <Badge variant="secondary">{templates.length}</Badge>}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -165,8 +297,9 @@ export default function TemplatesPage() {
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Channel</th>
+                    <th>Channels</th>
                     <th>Variables</th>
+                    <th>Subject</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -175,7 +308,9 @@ export default function TemplatesPage() {
                     <tr key={t.id}>
                       <td className="font-medium font-mono text-xs">{t.name}</td>
                       <td>
-                        <Badge variant="secondary">{t.channels.join(', ')}</Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {t.channels.map(ch => <Badge key={ch} variant="secondary">{ch}</Badge>)}
+                        </div>
                       </td>
                       <td>
                         <div className="flex flex-wrap gap-1">
@@ -183,13 +318,15 @@ export default function TemplatesPage() {
                             ? <span className="text-xs text-[var(--text-muted)]">—</span>
                             : t.variables.map(v => (
                               <span key={v} className="flex items-center gap-0.5 text-[0.68rem] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">
-                                <Tag size={9} />
-                                {v}
+                                <Tag size={9} />{v}
                               </span>
                             ))}
                         </div>
                       </td>
-                      <td className="text-right">
+                      <td className="text-xs text-[var(--text-secondary)] max-w-[160px] truncate">
+                        {t.subject ?? <span className="text-[var(--text-muted)]">—</span>}
+                      </td>
+                      <td>
                         <Button variant="ghost" size="icon" onClick={() => del(t.name)}
                           className="h-7 w-7 text-[var(--destructive)] hover:bg-red-50 dark:hover:bg-red-900/20">
                           <Trash2 size={13} />

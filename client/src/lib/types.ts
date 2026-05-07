@@ -128,7 +128,8 @@ export interface SendNotificationRequest {
 
 export interface CreateTemplateRequest {
   name: string;
-  channel?: Channel;
+  channels?: Channel[];  // preferred: multi-channel
+  channel?: Channel;     // legacy: single channel (still accepted by API)
   subject?: string;
   body: string;
   variables?: string[];

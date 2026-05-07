@@ -1,0 +1,5 @@
+Now I go to gap analysis with my expectations and what has been implemented.
+
+Let's start with sending messages plus template.My idea is that we have four notification types, so I can create a template for all four notification types with dynamic population fields.Then I can send a notification to select a template and give values for the dynamic fields. Then the platform sends the predefined template as a notification message.In the client application, we want all the functions to create a template, send SMS with the template, and we also want all the APIs to be implemented in the backend.Check this scenario; if you find a gap, fix it.
+
+Now let's check my idea with batch processing and live SSE . templaIn this case and in all cases, the notification service works as a microservice with a master backend. So, user ID–related data is always in the master DB because user data is in another service.te

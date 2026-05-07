@@ -129,11 +129,28 @@ func validateToAddress(to string, channel domain.Channel) error {
 // CreateTemplateRequest represents the request body for creating a template
 type CreateTemplateRequest struct {
 	Name      string                 `json:"name"`
-	Channel   domain.Channel         `json:"channel"`
+	Channels  []string               `json:"channels,omitempty"`  // preferred: multi-channel
+	Channel   domain.Channel         `json:"channel,omitempty"`   // legacy: single channel
 	Subject   string                 `json:"subject,omitempty"`
 	Body      string                 `json:"body"`
 	Variables []string               `json:"variables,omitempty"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ResolvedChannels returns the effective channels list, merging Channel + Channels fields.
+func (r *CreateTemplateRequest) ResolvedChannels() []string {
+	seen := map[string]bool{}
+	var result []string
+	for _, ch := range r.Channels {
+		if !seen[ch] {
+			seen[ch] = true
+			result = append(result, ch)
+		}
+	}
+	if r.Channel != "" && !seen[string(r.Channel)] {
+		result = append(result, string(r.Channel))
+	}
+	return result
 }
 
 // Validate validates the create template request
@@ -141,18 +158,22 @@ func (r *CreateTemplateRequest) Validate() error {
 	if r.Name == "" {
 		return fmt.Errorf("'name' field is required")
 	}
-
 	if r.Body == "" {
 		return fmt.Errorf("'body' field is required")
 	}
 
-	if r.Channel != "" && !isValidChannel(r.Channel) {
-		return fmt.Errorf("invalid channel: %s", r.Channel)
+	channels := r.ResolvedChannels()
+	for _, ch := range channels {
+		if !isValidChannel(domain.Channel(ch)) {
+			return fmt.Errorf("invalid channel: %s (must be one of: email, sms, push, in_app)", ch)
+		}
 	}
 
-	// Email templates should have a subject
-	if r.Channel == domain.ChannelEmail && r.Subject == "" {
-		return fmt.Errorf("'subject' is required for email templates")
+	// Email templates need a subject
+	for _, ch := range channels {
+		if ch == string(domain.ChannelEmail) && r.Subject == "" {
+			return fmt.Errorf("'subject' is required for email templates")
+		}
 	}
 
 	return nil

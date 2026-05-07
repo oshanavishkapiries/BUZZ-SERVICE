@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Channel, NotificationStatus } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,32 +24,46 @@ export function NotificationMatrix() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
+  const fetching = useRef(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    // Skip if a fetch is already in progress (interval overlap guard)
+    if (fetching.current) return;
+    fetching.current = true;
     setLoading(true);
     setError(null);
+
     try {
+      // Build all 20 requests and fire them in parallel
+      const pairs = CHANNELS.flatMap(ch =>
+        STATUSES.map(st => ({ ch, st }))
+      );
+
+      const counts = await Promise.all(
+        pairs.map(({ ch, st }) => api.countNotifications(ch, st))
+      );
+
       const result: Matrix = {};
-      for (const ch of CHANNELS) {
-        result[ch] = {};
-        for (const st of STATUSES) {
-          result[ch][st] = await api.countNotifications(ch, st);
-        }
-      }
+      pairs.forEach(({ ch, st }, i) => {
+        if (!result[ch]) result[ch] = {};
+        result[ch][st] = counts[i];
+      });
+
       setData(result);
       setLastFetch(new Date());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load matrix');
     } finally {
       setLoading(false);
+      fetching.current = false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
     const t = setInterval(fetchData, 30000);
     return () => clearInterval(t);
-  }, []);
+  }, [fetchData]);
 
   return (
     <Card>
@@ -89,9 +103,7 @@ export function NotificationMatrix() {
               <tbody>
                 {CHANNELS.map(ch => (
                   <tr key={ch}>
-                    <td className="font-medium capitalize">
-                      {ch.replace('_', ' ')}
-                    </td>
+                    <td className="font-medium capitalize">{ch.replace('_', ' ')}</td>
                     {STATUSES.map(st => {
                       const n = data[ch]?.[st] ?? 0;
                       return (

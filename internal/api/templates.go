@@ -1,6 +1,8 @@
 package api
 
 import (
+	"net/url"
+
 	"github.com/elight/buzz-service/internal/domain"
 	"github.com/elight/buzz-service/internal/store"
 	"github.com/gofiber/fiber/v2"
@@ -48,11 +50,7 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 		})
 	}
 
-	// Build channels array
-	var channels []string
-	if req.Channel != "" {
-		channels = []string{string(req.Channel)}
-	}
+	channels := req.ResolvedChannels()
 
 	// Create template
 	subjectPtr := &req.Subject
@@ -99,7 +97,7 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/templates/{name} [get]
 func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
-	name := c.Params("name")
+	name, _ := url.PathUnescape(c.Params("name"))
 
 	repo := store.NewTemplateRepository(h.store.DB())
 	template, err := repo.GetByName(c.Context(), name)
@@ -178,7 +176,7 @@ func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/templates/{name} [patch]
 func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
-	name := c.Params("name")
+	name, _ := url.PathUnescape(c.Params("name"))
 
 	var req UpdateTemplateRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -237,7 +235,7 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/templates/{name} [delete]
 func (h *TemplateHandler) DeleteTemplate(c *fiber.Ctx) error {
-	name := c.Params("name")
+	name, _ := url.PathUnescape(c.Params("name"))
 
 	repo := store.NewTemplateRepository(h.store.DB())
 	// First get the template to get its ID
