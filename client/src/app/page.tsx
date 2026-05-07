@@ -8,13 +8,17 @@ import { HealthResponse } from '@/lib/types';
 export default function Dashboard() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHealth = async () => {
+      setError(null);
       try {
         const result = await api.getHealth();
         setHealth(result);
       } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to fetch health status';
+        setError(message);
         console.error('Failed to fetch health:', err);
       } finally {
         setLoading(false);
@@ -34,6 +38,11 @@ export default function Dashboard() {
       {/* Health Status Card */}
       <div className="card p-6">
         <h2 className="text-lg font-bold mb-4 text-[var(--text-primary)]">Service Health</h2>
+        {error && (
+          <div className="mb-4 text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+            {error}
+          </div>
+        )}
         {loading ? (
           <div className="animate-pulse h-20 bg-[var(--bg-secondary)] rounded" />
         ) : health ? (
@@ -57,9 +66,7 @@ export default function Dashboard() {
               </span>
             </div>
           </div>
-        ) : (
-          <div className="text-red-600">Failed to fetch health status</div>
-        )}
+        ) : null}
       </div>
 
       {/* Notification Matrix */}

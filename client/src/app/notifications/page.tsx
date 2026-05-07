@@ -24,6 +24,7 @@ export default function NotificationsPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterChannel, setFilterChannel] = useState('');
   const [offset, setOffset] = useState(0);
+  const [listError, setListError] = useState<string | null>(null);
   const limit = 10;
 
   const handleSend = async (e: React.FormEvent) => {
@@ -53,6 +54,7 @@ export default function NotificationsPage() {
 
   const loadNotifications = async () => {
     setLoading(true);
+    setListError(null);
     try {
       const result = await api.listNotifications({
         status: filterStatus || undefined,
@@ -60,8 +62,11 @@ export default function NotificationsPage() {
         limit,
         offset,
       });
-      setNotifications(result.data);
+      setNotifications(result.data || []);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load notifications';
+      setListError(message);
+      setNotifications([]);
       console.error('Failed to load notifications:', err);
     } finally {
       setLoading(false);
@@ -171,6 +176,12 @@ export default function NotificationsPage() {
       {/* List Tab */}
       {tab === 'list' && (
         <div className="space-y-4">
+          {listError && (
+            <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+              {listError}
+            </div>
+          )}
+
           <div className="card p-4 grid grid-cols-2 gap-4">
             <div>
               <label className="label-base">Filter by Status</label>

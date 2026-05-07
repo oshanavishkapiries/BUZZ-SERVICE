@@ -17,13 +17,18 @@ export default function TemplatesPage() {
   const [variables, setVariables] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
   const loadTemplates = async () => {
     setLoading(true);
+    setListError(null);
     try {
       const result = await api.listTemplates({ limit: 100 });
-      setTemplates(result.data);
+      setTemplates(result.data || []);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load templates';
+      setListError(message);
+      setTemplates([]);
       console.error('Failed to load templates:', err);
     } finally {
       setLoading(false);
@@ -104,6 +109,12 @@ export default function TemplatesPage() {
 
       {tab === 'list' && (
         <>
+          {listError && (
+            <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+              {listError}
+            </div>
+          )}
+
           {loading ? (
             <div className="card p-6 text-center">Loading...</div>
           ) : templates.length === 0 ? (

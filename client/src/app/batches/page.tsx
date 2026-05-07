@@ -18,13 +18,18 @@ export default function BatchesPage() {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
   const loadBatches = async () => {
     setLoading(true);
+    setListError(null);
     try {
       const result = await api.listBatches({ limit: 50 });
-      setBatches(result.batches);
+      setBatches(result.batches || []);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load batches';
+      setListError(message);
+      setBatches([]);
       console.error('Failed to load batches:', err);
     } finally {
       setLoading(false);
@@ -176,6 +181,12 @@ export default function BatchesPage() {
 
       {tab === 'list' && (
         <>
+          {listError && (
+            <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+              {listError}
+            </div>
+          )}
+
           {loading ? (
             <div className="card p-6 text-center">Loading...</div>
           ) : batches.length === 0 ? (

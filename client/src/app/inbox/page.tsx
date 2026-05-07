@@ -8,14 +8,19 @@ export default function InboxPage() {
   const [entries, setEntries] = useState<InboxEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const loadInbox = async () => {
     setLoading(true);
+    setError(null);
     try {
       const result = await api.getInbox({ limit: 50 });
-      setEntries(result.data);
-      setUnreadCount(result.unread_count);
+      setEntries(result.data || []);
+      setUnreadCount(result.unread_count || 0);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load inbox';
+      setError(message);
+      setEntries([]);
       console.error('Failed to load inbox:', err);
     } finally {
       setLoading(false);
@@ -68,6 +73,12 @@ export default function InboxPage() {
           </button>
         )}
       </div>
+
+      {error && (
+        <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="card p-6 text-center">Loading...</div>
