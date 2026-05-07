@@ -167,6 +167,18 @@ func (g *Gateway) subscribeToPubSub() {
 	}
 }
 
+// PublishInboxUpdate sends an inbox_update event to a specific user's SSE connections.
+// It publishes via Redis so the event is delivered even in multi-instance deployments.
+func (g *Gateway) PublishInboxUpdate(ctx context.Context, userID string) {
+	payload, _ := json.Marshal(map[string]interface{}{
+		"type": "inbox_update",
+		"time": time.Now(),
+	})
+	if err := g.redis.Publish(ctx, "user:"+userID, string(payload)).Err(); err != nil {
+		g.logger.Error().Err(err).Str("user_id", userID).Msg("failed to publish inbox update")
+	}
+}
+
 // GetStats returns connection statistics
 func (g *Gateway) GetStats() map[string]int {
 	return g.connections.GetStats()

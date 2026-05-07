@@ -4,12 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { getConfig } from '@/lib/config';
 import { SSEEvent } from '@/lib/types';
 
-export function useSSE(userId: string) {
+interface UseSSEOptions {
+  onInboxUpdate?: () => void;
+}
+
+export function useSSE(userId: string, options: UseSSEOptions = {}) {
   const [events, setEvents] = useState<SSEEvent[]>([]);
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onInboxUpdateRef = useRef(options.onInboxUpdate);
+  onInboxUpdateRef.current = options.onInboxUpdate;
 
   const connect = () => {
     if (eventSourceRef.current) return;
@@ -29,11 +35,7 @@ export function useSSE(userId: string) {
         const data = JSON.parse(ev.data);
         setEvents((prev) => [
           ...prev,
-          {
-            type: 'connected',
-            timestamp: new Date().toISOString(),
-            data,
-          },
+          { type: 'connected', timestamp: new Date().toISOString(), data },
         ]);
         setStatus('connected');
       });
@@ -43,26 +45,22 @@ export function useSSE(userId: string) {
           const data = JSON.parse(ev.data);
           setEvents((prev) => [
             ...prev,
-            {
-              type: 'notification',
-              timestamp: new Date().toISOString(),
-              data,
-            },
+            { type: 'notification', timestamp: new Date().toISOString(), data },
           ]);
+          // If the payload signals an inbox update, call the callback
+          if (data?.type === 'inbox_update' && onInboxUpdateRef.current) {
+            onInboxUpdateRef.current();
+          }
         } catch (e) {
           console.error('Failed to parse notification event:', e);
         }
       });
 
       eventSource.addEventListener('error', (ev) => {
-        const data = JSON.parse((ev as any).data || '{}');
+        const data = JSON.parse((ev as MessageEvent).data || '{}');
         setEvents((prev) => [
           ...prev,
-          {
-            type: 'error',
-            timestamp: new Date().toISOString(),
-            error: data.error || 'Unknown error',
-          },
+          { type: 'error', timestamp: new Date().toISOString(), error: data.error || 'Unknown error' },
         ]);
         setStatus('error');
       });
@@ -75,7 +73,6 @@ export function useSSE(userId: string) {
           setError('Connection error');
           eventSource.close();
           eventSourceRef.current = null;
-          // Reconnect after 3 seconds
           reconnectTimeoutRef.current = setTimeout(connect, 3000);
         }
       };
@@ -105,18 +102,8 @@ export function useSSE(userId: string) {
 
   useEffect(() => {
     connect();
-
-    return () => {
-      disconnect();
-    };
+    return () => { disconnect(); };
   }, [userId]);
 
-  return {
-    events,
-    status,
-    error,
-    connect,
-    disconnect,
-    clearEvents,
-  };
+  return { events, status, error, connect, disconnect, clearEvents };
 }

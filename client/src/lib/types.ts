@@ -111,6 +111,19 @@ export interface Batch {
   completed_at?: string;
 }
 
+// Datasource
+export interface Datasource {
+  id: string;
+  name: string;
+  base_url: string;
+  auth_type: string;
+  auth_config?: Record<string, unknown>;
+  endpoints?: Record<string, unknown>;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // API Request shapes
 export interface SendNotificationRequest {
   to: string;
@@ -134,6 +147,14 @@ export interface CreateTemplateRequest {
   body: string;
   variables?: string[];
   metadata?: Record<string, unknown>;
+}
+
+export interface CreateDatasourceRequest {
+  name: string;
+  base_url: string;
+  auth_type?: string;
+  auth_config?: Record<string, unknown>;
+  endpoints?: Record<string, unknown>;
 }
 
 export interface UpdateTemplateRequest {

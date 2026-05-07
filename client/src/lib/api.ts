@@ -200,6 +200,28 @@ class APIClient {
     );
   }
 
+  // Online user stats from SSE gateway
+  async getOnlineStats(): Promise<{ online_users: number; total_connections: number }> {
+    return this.request('/api/v1/stream/stats');
+  }
+
+  // Datasource CRUD
+  async listDatasources(): Promise<{ data: Types.Datasource[]; total: number }> {
+    return this.request('/api/v1/datasources');
+  }
+
+  async createDatasource(req: Types.CreateDatasourceRequest): Promise<Types.Datasource> {
+    return this.request('/api/v1/datasources', { method: 'POST', body: JSON.stringify(req) });
+  }
+
+  async getDatasource(id: string): Promise<Types.Datasource> {
+    return this.request(`/api/v1/datasources/${id}`);
+  }
+
+  async deleteDatasource(id: string): Promise<void> {
+    return this.request(`/api/v1/datasources/${id}`, { method: 'DELETE' });
+  }
+
   // Notification count for matrix
   async countNotifications(channel: string, status: string): Promise<number> {
     const query = new URLSearchParams({

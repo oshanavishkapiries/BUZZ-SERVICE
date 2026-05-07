@@ -46,7 +46,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	v1.Use(AuthMiddleware(db))
 
 	// Notifications
-	notifHandler := NewNotificationHandler(db, producer)
+	notifHandler := NewNotificationHandler(db, producer, gateway)
 	notifications := v1.Group("/notifications")
 	notifications.Post("/", RequireScope("notification:send"), notifHandler.SendNotification)
 	notifications.Get("/", RequireScope("notification:read"), notifHandler.ListNotifications)
@@ -78,6 +78,22 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 
 	// Real-time notifications (SSE stream)
 	v1.Get("/stream", gateway.HandleSSEConnection)
+	v1.Get("/stream/stats", func(c *fiber.Ctx) error {
+		stats := gateway.GetStats()
+		return c.JSON(fiber.Map{
+			"online_users":      stats["total_users"],
+			"total_connections": stats["total_connections"],
+		})
+	})
+
+	// Datasources (external API registrations for batch jobs)
+	datasourceHandler := NewDatasourceHandler(db)
+	datasources := v1.Group("/datasources")
+	datasources.Post("/", RequireScope("batch:send"), datasourceHandler.CreateDatasource)
+	datasources.Get("/", RequireScope("batch:read"), datasourceHandler.ListDatasources)
+	datasources.Get("/:id", RequireScope("batch:read"), datasourceHandler.GetDatasource)
+	datasources.Patch("/:id", RequireScope("batch:send"), datasourceHandler.UpdateDatasource)
+	datasources.Delete("/:id", RequireScope("batch:send"), datasourceHandler.DeleteDatasource)
 
 	// Batch notifications
 	batchHandler := NewBatchHandler(db, producer)

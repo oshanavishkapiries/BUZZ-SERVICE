@@ -22,20 +22,38 @@ export default function Dashboard() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<number | null>(null);
 
   useEffect(() => {
     api.getHealth()
       .then(setHealth)
       .catch(e => setError(e instanceof Error ? e.message : 'Failed to reach service'))
       .finally(() => setLoading(false));
+
+    const fetchOnline = () => {
+      api.getOnlineStats()
+        .then(s => setOnlineUsers(s.online_users))
+        .catch(() => {});
+    };
+    fetchOnline();
+    const t = setInterval(fetchOnline, 30000);
+    return () => clearInterval(t);
   }, []);
 
   return (
     <div className="space-y-8">
       {/* Page header */}
-      <div className="page-header">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Dashboard</h1>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">Overview of your Buzz Notification Service</p>
+      <div className="page-header flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Dashboard</h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">Overview of your Buzz Notification Service</p>
+        </div>
+        {onlineUsers !== null && (
+          <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-[var(--radius)] bg-green-50 dark:bg-green-900/20 text-[var(--success)] border border-[var(--success)]">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+            {onlineUsers} online
+          </div>
+        )}
       </div>
 
       {error && (

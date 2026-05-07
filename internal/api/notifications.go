@@ -7,6 +7,7 @@ import (
 
 	"github.com/elight/buzz-service/internal/domain"
 	"github.com/elight/buzz-service/internal/queue"
+	"github.com/elight/buzz-service/internal/realtime"
 	"github.com/elight/buzz-service/internal/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -16,13 +17,15 @@ import (
 type NotificationHandler struct {
 	store    *store.PostgresStore
 	producer *queue.Producer
+	gateway  *realtime.Gateway
 }
 
 // NewNotificationHandler creates a new notification handler
-func NewNotificationHandler(store *store.PostgresStore, producer *queue.Producer) *NotificationHandler {
+func NewNotificationHandler(store *store.PostgresStore, producer *queue.Producer, gateway *realtime.Gateway) *NotificationHandler {
 	return &NotificationHandler{
 		store:    store,
 		producer: producer,
+		gateway:  gateway,
 	}
 }
 
@@ -165,6 +168,19 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 	if err := h.producer.EnqueueNotification(ctx, notification); err != nil {
 		// Log error but don't fail the request - notification is already in DB
 		fmt.Printf("Failed to enqueue notification %s: %v\n", notification.ID, err)
+	}
+
+	// Notify user via SSE so inbox invalidates in real time
+	if h.gateway != nil {
+		userID := ""
+		if req.Channel == domain.ChannelInApp {
+			userID = req.To
+		} else if req.RecipientID != "" {
+			userID = req.RecipientID
+		}
+		if userID != "" {
+			h.gateway.PublishInboxUpdate(ctx, userID)
+		}
 	}
 
 	return c.Status(202).JSON(fiber.Map{

@@ -3,17 +3,21 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { InboxEntry } from '@/lib/types';
+import { getConfig } from '@/lib/config';
+import { useSSE } from '@/hooks/useSSE';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Inbox as InboxIcon, CheckCheck, Trash2, Mail, MailOpen } from 'lucide-react';
+import { Inbox as InboxIcon, CheckCheck, Trash2, Mail, MailOpen, Wifi, WifiOff } from 'lucide-react';
 
 export default function InboxPage() {
   const [entries, setEntries] = useState<InboxEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const userId = getConfig().userId;
 
   const load = async () => {
     setLoading(true);
@@ -29,6 +33,10 @@ export default function InboxPage() {
       setLoading(false);
     }
   };
+
+  const { status: sseStatus } = useSSE(userId, {
+    onInboxUpdate: load,
+  });
 
   useEffect(() => { load(); }, []);
 
@@ -59,12 +67,28 @@ export default function InboxPage() {
             )}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={markAllRead}>
-            <CheckCheck size={14} />
-            Mark all read
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <span className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-[var(--radius)] border ${
+            sseStatus === 'connected'
+              ? 'text-[var(--success)] border-[var(--success)] bg-green-50 dark:bg-green-900/20'
+              : sseStatus === 'connecting'
+              ? 'text-[var(--warning)] border-[var(--warning)] bg-yellow-50 dark:bg-yellow-900/20'
+              : 'text-[var(--text-muted)] border-[var(--border-color)]'
+          }`}>
+            {sseStatus === 'connected'
+              ? <><Wifi size={11} /> Live</>
+              : sseStatus === 'connecting'
+              ? <><Wifi size={11} /> Connecting…</>
+              : <><WifiOff size={11} /> Offline</>
+            }
+          </span>
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={markAllRead}>
+              <CheckCheck size={14} />
+              Mark all read
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
@@ -86,7 +110,7 @@ export default function InboxPage() {
             </div>
           ) : (
             <div>
-              {entries.map((entry, i) => (
+              {entries.map((entry) => (
                 <div
                   key={entry.id}
                   className={`flex items-start gap-4 px-5 py-4 border-b border-[var(--border-color)] last:border-0 transition-colors ${

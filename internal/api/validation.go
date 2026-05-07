@@ -206,6 +206,23 @@ type SendBulkRequest struct {
 	IdempotencyKey string                 `json:"idempotency_key,omitempty"`
 }
 
+// CreateDatasourceRequest represents the request body for registering a datasource
+type CreateDatasourceRequest struct {
+	Name       string                 `json:"name"`
+	BaseURL    string                 `json:"base_url"`
+	AuthType   string                 `json:"auth_type,omitempty"` // bearer, basic, api_key, ""
+	AuthConfig map[string]interface{} `json:"auth_config,omitempty"`
+	Endpoints  map[string]interface{} `json:"endpoints,omitempty"`
+}
+
+// UpdateDatasourceRequest represents the request body for updating a datasource
+type UpdateDatasourceRequest struct {
+	BaseURL    *string                `json:"base_url,omitempty"`
+	AuthType   *string                `json:"auth_type,omitempty"`
+	AuthConfig map[string]interface{} `json:"auth_config,omitempty"`
+	Endpoints  map[string]interface{} `json:"endpoints,omitempty"`
+}
+
 // ErrorResponse is the standard error response body
 type ErrorResponse struct {
 	Error   string `json:"error"             example:"validation failed"`
