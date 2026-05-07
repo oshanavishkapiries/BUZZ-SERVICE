@@ -11,6 +11,8 @@ import {
   FileText,
   Smartphone,
   Layers,
+  Database,
+  BookOpen,
   Settings,
 } from 'lucide-react';
 
@@ -22,9 +24,11 @@ const navItems = [
   { href: '/templates',     label: 'Templates',     icon: FileText },
   { href: '/devices',       label: 'Devices',       icon: Smartphone },
   { href: '/batches',       label: 'Batches',       icon: Layers },
+  { href: '/datasources',   label: 'Datasources',   icon: Database },
 ];
 
 const bottomItems = [
+  { href: '/docs',     label: 'Docs',     icon: BookOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

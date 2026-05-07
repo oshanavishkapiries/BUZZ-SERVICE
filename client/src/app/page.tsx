@@ -49,8 +49,9 @@ export default function Dashboard() {
           <p className="text-sm text-[var(--text-secondary)] mt-1">Overview of your Buzz Notification Service</p>
         </div>
         {onlineUsers !== null && (
-          <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-[var(--radius)] bg-green-50 dark:bg-green-900/20 text-[var(--success)] border border-[var(--success)]">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+          <div className="status-pill status-pill-up">
+            <span style={{ width: '0.375rem', height: '0.375rem', borderRadius: '50%', flexShrink: 0,
+              background: '#16a34a', animation: 'pulse 2s infinite' }} />
             {onlineUsers} online
           </div>
         )}

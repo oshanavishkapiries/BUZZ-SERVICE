@@ -68,12 +68,10 @@ export default function InboxPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-[var(--radius)] border ${
-            sseStatus === 'connected'
-              ? 'text-[var(--success)] border-[var(--success)] bg-green-50 dark:bg-green-900/20'
-              : sseStatus === 'connecting'
-              ? 'text-[var(--warning)] border-[var(--warning)] bg-yellow-50 dark:bg-yellow-900/20'
-              : 'text-[var(--text-muted)] border-[var(--border-color)]'
+          <span className={`status-pill ${
+            sseStatus === 'connected' ? 'status-pill-up'
+            : sseStatus === 'connecting' ? 'status-pill-warning'
+            : 'status-pill-neutral'
           }`}>
             {sseStatus === 'connected'
               ? <><Wifi size={11} /> Live</>

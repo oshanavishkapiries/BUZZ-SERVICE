@@ -97,22 +97,48 @@
   align-items: center;
   gap: 0.3rem;
   padding: 0.2rem 0.55rem;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
+  line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-radius: var(--radius);
 }
 
-.badge-orange { background: var(--accent-muted); color: var(--accent); }
-.badge-green  { background: #dcfce7; color: #16a34a; }
-.badge-red    { background: #fee2e2; color: #dc2626; }
-.badge-blue   { background: #dbeafe; color: #1d4ed8; }
-.badge-gray   { background: var(--bg-tertiary); color: var(--text-secondary); }
+/* light: tinted bg + dark text for 5:1+ contrast */
+.badge-orange { background: #ffedd5; color: #9a3412; }
+.badge-green  { background: #dcfce7; color: #14532d; }
+.badge-red    { background: #fee2e2; color: #991b1b; }
+.badge-blue   { background: #dbeafe; color: #1e3a8a; }
+/* dark: keep tinted bg, use light text */
+.dark .badge-orange { background: rgba(124,45,18,0.25);  color: #fb923c; }
+.dark .badge-green  { background: rgba(20,83,45,0.25);   color: #86efac; }
+.dark .badge-red    { background: rgba(127,29,29,0.25);  color: #fca5a5; }
+.dark .badge-blue   { background: rgba(30,58,95,0.25);   color: #93c5fd; }
 
-.dark .badge-green  { background: #14532d40; color: #4ade80; }
-.dark .badge-red    { background: #7f1d1d40; color: #f87171; }
-.dark .badge-blue   { background: #1e3a5f40; color: #60a5fa; }
+/* ── Fixed status pill (API Connected / Offline / online counter) */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius);
+  border: 1px solid;
+}
+.status-pill-up      { background: #dcfce7; border-color: #86efac; color: #14532d; }
+.status-pill-down    { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+.status-pill-warning { background: #fef3c7; border-color: #fcd34d; color: #78350f; }
+.status-pill-neutral { background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-secondary); }
+
+.dark .status-pill-up      { background: rgba(20,83,45,0.3);   border-color: #166534; color: #86efac; }
+.dark .status-pill-down    { background: rgba(127,29,29,0.3);  border-color: #991b1b; color: #fca5a5; }
+.dark .status-pill-warning { background: rgba(120,53,15,0.3);  border-color: #92400e; color: #fcd34d; }
+.dark .status-pill-neutral { background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-secondary); }
 
 /* ── Inline status dot ──────────────────────────────── */
 .status-dot {
