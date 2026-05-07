@@ -287,6 +287,36 @@ func (h *NotificationHandler) ListNotifications(c *fiber.Ctx) error {
 	})
 }
 
+// GetMatrix godoc
+// @Summary      Get notification matrix
+// @Description  Returns notification counts grouped by channel and status in a single query
+// @Tags         notifications
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/notifications/matrix [get]
+func (h *NotificationHandler) GetMatrix(c *fiber.Ctx) error {
+	repo := store.NewNotificationRepository(h.store.DB())
+	counts, err := repo.GetMatrix(c.Context())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "failed to fetch notification matrix",
+			"details": err.Error(),
+		})
+	}
+
+	matrix := map[string]map[string]int64{}
+	for _, mc := range counts {
+		if matrix[mc.Channel] == nil {
+			matrix[mc.Channel] = map[string]int64{}
+		}
+		matrix[mc.Channel][mc.Status] = mc.Count
+	}
+
+	return c.JSON(fiber.Map{"matrix": matrix})
+}
+
 // renderTemplate performs simple variable substitution in templates
 // Replaces {{variable}} placeholders with actual values from data
 func renderTemplate(template string, data map[string]interface{}) string {

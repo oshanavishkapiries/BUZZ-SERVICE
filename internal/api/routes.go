@@ -51,6 +51,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	notifications := v1.Group("/notifications")
 	notifications.Post("/", RequireScope("notification:send"), notifHandler.SendNotification)
 	notifications.Get("/", RequireScope("notification:read"), notifHandler.ListNotifications)
+	notifications.Get("/matrix", RequireScope("notification:read"), notifHandler.GetMatrix)
 	notifications.Get("/:id", RequireScope("notification:read"), notifHandler.GetNotification)
 
 	// Templates

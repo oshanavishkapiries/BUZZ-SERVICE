@@ -27,29 +27,14 @@ export function NotificationMatrix() {
   const fetching = useRef(false);
 
   const fetchData = useCallback(async () => {
-    // Skip if a fetch is already in progress (interval overlap guard)
     if (fetching.current) return;
     fetching.current = true;
     setLoading(true);
     setError(null);
 
     try {
-      // Build all 20 requests and fire them in parallel
-      const pairs = CHANNELS.flatMap(ch =>
-        STATUSES.map(st => ({ ch, st }))
-      );
-
-      const counts = await Promise.all(
-        pairs.map(({ ch, st }) => api.countNotifications(ch, st))
-      );
-
-      const result: Matrix = {};
-      pairs.forEach(({ ch, st }, i) => {
-        if (!result[ch]) result[ch] = {};
-        result[ch][st] = counts[i];
-      });
-
-      setData(result);
+      const matrix = await api.getNotificationMatrix();
+      setData(matrix);
       setLastFetch(new Date());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load matrix');

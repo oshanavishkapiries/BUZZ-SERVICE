@@ -243,17 +243,12 @@ class APIClient {
     return this.request(`/api/v1/providers/${id}`, { method: 'DELETE' });
   }
 
-  // Notification count for matrix
-  async countNotifications(channel: string, status: string): Promise<number> {
-    const query = new URLSearchParams({
-      channel,
-      status,
-      limit: '1',
-    });
-    const result = await this.request<Types.PaginatedResponse<Types.Notification>>(
-      `/api/v1/notifications?${query.toString()}`
+  // Notification matrix (all channel/status counts in one request)
+  async getNotificationMatrix(): Promise<Record<string, Record<string, number>>> {
+    const result = await this.request<{ matrix: Record<string, Record<string, number>> }>(
+      '/api/v1/notifications/matrix'
     );
-    return result.total;
+    return result.matrix;
   }
 }
 
