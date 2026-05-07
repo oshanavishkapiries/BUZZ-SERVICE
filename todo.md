@@ -1,5 +1,3 @@
-In this application's provider section, SMS providers, we have Notify LK. I want to remove that provider and replace it with this new provider.
+/notifications
 
-provider : TEXT.LK
-
-provider document read : /workspaces/BUZZ-SERVICE/textme.md
+I want to add a new feature to the notification browse section. In this section we can check what notifications we send to the client. The feature is: when a notification fails, save the generated error message. Developers can view that error message in the client application.

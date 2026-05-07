@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Send, List, ChevronLeft, ChevronRight, FileText, Type, Tag, Eye } from 'lucide-react';
+import { Send, List, ChevronLeft, ChevronRight, FileText, Type, Tag, Eye, AlertCircle } from 'lucide-react';
 
 const STATUS_VARIANT: Record<string, 'success' | 'info' | 'warning' | 'destructive' | 'secondary'> = {
   delivered: 'success', sent: 'info', queued: 'warning', processing: 'warning', failed: 'destructive',
@@ -518,13 +518,14 @@ export default function NotificationsPage() {
                         <th>Template</th>
                         <th>Recipient</th>
                         <th>Body</th>
+                        <th>Error</th>
                         <th>Date</th>
                       </tr>
                     </thead>
                     <tbody>
                       {notifications.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="text-center py-12 text-[var(--text-muted)]">No notifications found</td>
+                          <td colSpan={7} className="text-center py-12 text-[var(--text-muted)]">No notifications found</td>
                         </tr>
                       ) : notifications.map(n => (
                         <tr key={n.id}>
@@ -537,6 +538,21 @@ export default function NotificationsPage() {
                           </td>
                           <td className="font-mono text-xs text-[var(--text-secondary)] max-w-[140px] truncate">{JSON.stringify(n.recipient)}</td>
                           <td className="max-w-[180px] truncate text-xs">{n.body}</td>
+                          <td className="max-w-[200px]">
+                            {n.error_message ? (
+                              <div className="flex items-start gap-1" title={n.error_message}>
+                                <AlertCircle size={11} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+                                <span className="text-xs text-[var(--destructive)] truncate">
+                                  {n.error_code && (
+                                    <code className="font-mono mr-1 opacity-70">[{n.error_code}]</code>
+                                  )}
+                                  {n.error_message}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-[var(--text-muted)]">—</span>
+                            )}
+                          </td>
                           <td className="text-xs text-[var(--text-muted)] whitespace-nowrap">{new Date(n.created_at).toLocaleDateString()}</td>
                         </tr>
                       ))}
