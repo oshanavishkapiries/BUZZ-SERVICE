@@ -9,3 +9,10 @@ I want to update the agent.md file to serve as an entry point for the agent work
 I think you got the idea. What I want to do is, if you have any questions, feel free to ask me, and I will provide clear guidance or answers for the equations before starting implementation.
 
 This is the initialization of this agent workflow process. So you want to create initial files for that.
+
+-------------------
+
+Remove all project overview–related content from the agent.md file because it always explains the agentic workflow. In the agentic workflow, create an overview.md file to provide a brief overview of the project without too many details. If detailed information is needed, the coding tool can read the files and retrieve the necessary details.
+
+-------------------
+
