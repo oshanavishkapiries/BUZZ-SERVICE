@@ -52,6 +52,7 @@ export default function NotificationsPage() {
   const [tplVarValues, setTplVarValues] = useState<Record<string, string>>({});
   const [showPreview, setShowPreview] = useState(false);
   const [loadingTpls, setLoadingTpls] = useState(false);
+  const [tplLoadError, setTplLoadError] = useState<string | null>(null);
 
   // Shared send state
   const [sending, setSending] = useState(false);
@@ -81,10 +82,12 @@ export default function NotificationsPage() {
     if (sendMode !== 'template') return;
     setSelectedTpl(null);
     setTplVarValues({});
+    setTemplates([]);
+    setTplLoadError(null);
     setLoadingTpls(true);
     api.listTemplates({ channel: tplChannel, limit: 100 })
       .then(r => setTemplates(r.data || []))
-      .catch(() => setTemplates([]))
+      .catch(e => setTplLoadError(e instanceof Error ? e.message : 'Failed to load templates'))
       .finally(() => setLoadingTpls(false));
   }, [sendMode, tplChannel]);
 
@@ -314,9 +317,13 @@ export default function NotificationsPage() {
                         <Label htmlFor="tplName">Template</Label>
                         {loadingTpls ? (
                           <div className="h-9 bg-[var(--bg-tertiary)] rounded animate-pulse" />
+                        ) : tplLoadError ? (
+                          <div className="h-9 flex items-center px-3 rounded-[var(--radius)] border border-red-300 text-sm text-red-500">
+                            {tplLoadError}
+                          </div>
                         ) : templates.length === 0 ? (
                           <div className="h-9 flex items-center px-3 rounded-[var(--radius)] border border-[var(--border-color)] text-sm text-[var(--text-muted)]">
-                            No templates for {tplChannel} — create one first
+                            No templates for {tplChannel} — create one in Templates
                           </div>
                         ) : (
                           <Select id="tplName" value={selectedTpl?.name ?? ''}

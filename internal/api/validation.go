@@ -213,8 +213,10 @@ func (r *CreateTemplateRequest) Validate() error {
 
 // UpdateTemplateRequest represents the request body for updating a template
 type UpdateTemplateRequest struct {
+	Channels []string               `json:"channels,omitempty"`
 	Subject  *string                `json:"subject,omitempty"`
 	Body     *string                `json:"body,omitempty"`
+	Variables []string              `json:"variables,omitempty"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	Active   *bool                  `json:"active,omitempty"`
 }

@@ -187,8 +187,10 @@ export interface CreateDatasourceRequest {
 }
 
 export interface UpdateTemplateRequest {
+  channels?: Channel[];
   subject?: string;
   body?: string;
+  variables?: string[];
   metadata?: Record<string, unknown>;
   active?: boolean;
 }

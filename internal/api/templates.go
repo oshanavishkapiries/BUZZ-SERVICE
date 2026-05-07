@@ -196,11 +196,17 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	}
 
 	// Update fields if provided
+	if len(req.Channels) > 0 {
+		template.Channels = req.Channels
+	}
 	if req.Subject != nil {
 		template.Subject = req.Subject
 	}
 	if req.Body != nil {
 		template.Body = *req.Body
+	}
+	if req.Variables != nil {
+		template.Variables = req.Variables
 	}
 	if req.Metadata != nil {
 		template.Config = req.Metadata
