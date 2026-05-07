@@ -14,6 +14,7 @@ import {
   Database,
   BookOpen,
   Settings,
+  Zap,
 } from 'lucide-react';
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/devices',       label: 'Devices',       icon: Smartphone },
   { href: '/batches',       label: 'Batches',       icon: Layers },
   { href: '/datasources',   label: 'Datasources',   icon: Database },
+  { href: '/providers',     label: 'Providers',     icon: Zap },
 ];
 
 const bottomItems = [

@@ -26,7 +26,6 @@ import (
 	"github.com/elight/buzz-service/internal/domain"
 	"github.com/elight/buzz-service/internal/provider"
 	"github.com/elight/buzz-service/internal/provider/inapp"
-	"github.com/elight/buzz-service/internal/provider/mock"
 	"github.com/elight/buzz-service/internal/queue"
 	"github.com/elight/buzz-service/internal/realtime"
 	"github.com/elight/buzz-service/internal/store"
@@ -83,13 +82,16 @@ func main() {
 	gateway.Start()
 	defer gateway.Stop()
 
-	// Initialize providers
-	providers := map[domain.Channel]provider.Provider{
-		domain.ChannelEmail: mock.NewMockProvider("mock-email", domain.ChannelEmail, appLogger),
-		domain.ChannelSMS:   mock.NewMockProvider("mock-sms", domain.ChannelSMS, appLogger),
-		domain.ChannelPush:  mock.NewMockProvider("mock-push", domain.ChannelPush, appLogger),
-		domain.ChannelInApp: inapp.NewInAppProvider(db, redisClient),
+	// Build provider registry from database configs.
+	// In-app is always wired directly (no DB config needed).
+	registryCtx := context.Background()
+	registry, err := provider.NewRegistry(registryCtx, db, redisClient)
+	if err != nil {
+		appLogger.Fatal().Err(err).Msg("Failed to initialise provider registry")
 	}
+	// In-app is always available — wire it directly into the registry.
+	inappProvider := inapp.NewInAppProvider(db, redisClient)
+	registry.RegisterFixed(domain.ChannelInApp, inappProvider)
 
 	// Initialize worker
 	worker := queue.NewWorker(
@@ -100,7 +102,7 @@ func main() {
 			Queues:        cfg.Queue.Queues,
 		},
 		db,
-		providers,
+		registry,
 		appLogger,
 	)
 
@@ -121,7 +123,7 @@ func main() {
 	})
 
 	// Setup routes
-	api.SetupRoutes(app, db, producer, cfg, gateway)
+	api.SetupRoutes(app, db, producer, cfg, gateway, registry)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)

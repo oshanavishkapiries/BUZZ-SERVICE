@@ -8,6 +8,37 @@ import (
 	"github.com/elight/buzz-service/internal/domain"
 )
 
+// CreateProviderRequest represents the request body for creating a provider config
+type CreateProviderRequest struct {
+	Name      string                 `json:"name"`
+	Channel   domain.Channel         `json:"channel"`
+	Provider  string                 `json:"provider"`
+	Config    map[string]interface{} `json:"config"`
+	IsDefault bool                   `json:"is_default,omitempty"`
+}
+
+// Validate validates the create provider request
+func (r *CreateProviderRequest) Validate() error {
+	if r.Name == "" {
+		return fmt.Errorf("'name' is required")
+	}
+	if !isValidChannel(r.Channel) {
+		return fmt.Errorf("invalid channel: %s (must be one of: email, sms, push, in_app)", r.Channel)
+	}
+	if r.Provider == "" {
+		return fmt.Errorf("'provider' is required (e.g. ses, smtp, twilio, notifylk, fcm)")
+	}
+	return nil
+}
+
+// UpdateProviderRequest represents the request body for updating a provider config
+type UpdateProviderRequest struct {
+	Name      *string                `json:"name,omitempty"`
+	Config    map[string]interface{} `json:"config,omitempty"`
+	IsDefault *bool                  `json:"is_default,omitempty"`
+	IsActive  *bool                  `json:"is_active,omitempty"`
+}
+
 var (
 	// RFC 5322 compliant email regex (simplified)
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
@@ -22,6 +53,7 @@ type SendNotificationRequest struct {
 	To             string                 `json:"to"`
 	Channel        domain.Channel         `json:"channel"`
 	Priority       domain.Priority        `json:"priority,omitempty"`
+	Provider       string                 `json:"provider,omitempty"`
 	Template       string                 `json:"template,omitempty"`
 	Subject        string                 `json:"subject,omitempty"`
 	Body           string                 `json:"body,omitempty"`

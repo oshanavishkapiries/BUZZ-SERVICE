@@ -222,6 +222,27 @@ class APIClient {
     return this.request(`/api/v1/datasources/${id}`, { method: 'DELETE' });
   }
 
+  // Provider configs CRUD
+  async listProviders(): Promise<{ data: Types.ProviderConfig[]; total: number }> {
+    return this.request('/api/v1/providers');
+  }
+
+  async createProvider(req: Types.CreateProviderRequest): Promise<Types.ProviderConfig> {
+    return this.request('/api/v1/providers', { method: 'POST', body: JSON.stringify(req) });
+  }
+
+  async getProvider(id: string): Promise<Types.ProviderConfig> {
+    return this.request(`/api/v1/providers/${id}`);
+  }
+
+  async updateProvider(id: string, req: Types.UpdateProviderRequest): Promise<Types.ProviderConfig> {
+    return this.request(`/api/v1/providers/${id}`, { method: 'PATCH', body: JSON.stringify(req) });
+  }
+
+  async deleteProvider(id: string): Promise<void> {
+    return this.request(`/api/v1/providers/${id}`, { method: 'DELETE' });
+  }
+
   // Notification count for matrix
   async countNotifications(channel: string, status: string): Promise<number> {
     const query = new URLSearchParams({

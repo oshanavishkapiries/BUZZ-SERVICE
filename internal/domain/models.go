@@ -267,8 +267,22 @@ type DeviceToken struct {
 	DeletedAt          *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
+// ProviderConfig represents a database-stored provider configuration
+type ProviderConfig struct {
+	ID        uuid.UUID `json:"id"         db:"id"`
+	Name      string    `json:"name"       db:"name"`
+	Channel   Channel   `json:"channel"    db:"channel"`
+	Provider  string    `json:"provider"   db:"provider"`
+	Config    JSONB     `json:"config"     db:"config"`
+	IsDefault bool      `json:"is_default" db:"is_default"`
+	IsActive  bool      `json:"is_active"  db:"is_active"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
 // Custom errors for domain
 var (
-	ErrDatasourceNotFound = fmt.Errorf("datasource not found")
-	ErrBatchNotFound      = fmt.Errorf("batch not found")
+	ErrDatasourceNotFound    = fmt.Errorf("datasource not found")
+	ErrBatchNotFound         = fmt.Errorf("batch not found")
+	ErrProviderConfigNotFound = fmt.Errorf("provider config not found")
 )

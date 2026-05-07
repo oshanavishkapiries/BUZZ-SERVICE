@@ -18,13 +18,19 @@ type FCMProvider struct {
 
 // FCMConfig contains Firebase configuration
 type FCMConfig struct {
-	CredentialsFile string
+	CredentialsFile string // path to service-account JSON file
+	CredentialsJSON string // inline service-account JSON (takes priority over CredentialsFile)
 	ProjectID       string
 }
 
 // NewFCMProvider creates a new Firebase Cloud Messaging provider
 func NewFCMProvider(ctx context.Context, cfg FCMConfig) (*FCMProvider, error) {
-	opt := option.WithCredentialsFile(cfg.CredentialsFile)
+	var opt option.ClientOption
+	if cfg.CredentialsJSON != "" {
+		opt = option.WithCredentialsJSON([]byte(cfg.CredentialsJSON))
+	} else {
+		opt = option.WithCredentialsFile(cfg.CredentialsFile)
+	}
 
 	app, err := firebase.NewApp(ctx, &firebase.Config{
 		ProjectID: cfg.ProjectID,

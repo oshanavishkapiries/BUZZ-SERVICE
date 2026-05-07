@@ -129,6 +129,7 @@ export interface SendNotificationRequest {
   to: string;
   channel: Channel;
   priority?: Priority;
+  provider?: string;
   template?: string;
   subject?: string;
   body?: string;
@@ -137,6 +138,34 @@ export interface SendNotificationRequest {
   recipient_name?: string;
   idempotency_key?: string;
   scheduled_for?: string;
+}
+
+// Provider configs
+export interface ProviderConfig {
+  id: string;
+  name: string;
+  channel: Channel;
+  provider: string;
+  config: Record<string, unknown>;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateProviderRequest {
+  name: string;
+  channel: Channel;
+  provider: string;
+  config: Record<string, unknown>;
+  is_default?: boolean;
+}
+
+export interface UpdateProviderRequest {
+  name?: string;
+  config?: Record<string, unknown>;
+  is_default?: boolean;
+  is_active?: boolean;
 }
 
 export interface CreateTemplateRequest {

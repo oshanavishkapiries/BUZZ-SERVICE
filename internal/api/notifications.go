@@ -139,10 +139,16 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 		subjectPtr = nil
 	}
 
+	var providerPtr *string
+	if req.Provider != "" {
+		providerPtr = &req.Provider
+	}
+
 	notification := &domain.Notification{
 		ID:         uuid.New(),
 		Channel:    req.Channel,
 		Priority:   req.Priority,
+		Provider:   providerPtr,
 		Recipient:  recipient,
 		Subject:    subjectPtr,
 		Body:       body,

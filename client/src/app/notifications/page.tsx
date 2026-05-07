@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { Channel, Priority, Notification, Template } from '@/lib/types';
+import { Channel, Priority, Notification, Template, ProviderConfig } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -40,6 +40,8 @@ export default function NotificationsPage() {
   const [priority, setPriority] = useState<Priority>('normal');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('');
+  const [availableProviders, setAvailableProviders] = useState<ProviderConfig[]>([]);
 
   // Template send
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -64,6 +66,15 @@ export default function NotificationsPage() {
   const [offset, setOffset] = useState(0);
   const [listError, setListError] = useState<string | null>(null);
   const limit = 20;
+
+  // ── Load providers for the active channel ─────────────────────────────────
+  useEffect(() => {
+    api.listProviders()
+      .then(r => setAvailableProviders(r.data || []))
+      .catch(() => setAvailableProviders([]));
+  }, []);
+
+  const channelProviders = availableProviders.filter(p => p.is_active && p.channel === channel);
 
   // ── Fetch templates for the selected channel ────────────────────────────────
   useEffect(() => {
@@ -106,6 +117,7 @@ export default function NotificationsPage() {
       } else {
         r = await api.sendNotification({
           to, channel, priority,
+          provider: selectedProvider || undefined,
           subject: subject || undefined,
           body,
         });
@@ -245,6 +257,19 @@ export default function NotificationsPage() {
                           <Label htmlFor="subject">Subject</Label>
                           <Input id="subject" value={subject} onChange={e => setSubject(e.target.value)}
                             placeholder="Email subject" />
+                        </div>
+                      )}
+                      {channelProviders.length > 0 && (
+                        <div>
+                          <Label htmlFor="prov">Provider <span className="font-normal text-[var(--text-muted)]">(optional)</span></Label>
+                          <Select id="prov" value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}>
+                            <option value="">Default</option>
+                            {channelProviders.map(p => (
+                              <option key={p.id} value={p.name}>
+                                {p.name}{p.is_default ? ' (default)' : ''}
+                              </option>
+                            ))}
+                          </Select>
                         </div>
                       )}
                       <div>

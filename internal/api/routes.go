@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/elight/buzz-service/internal/config"
+	"github.com/elight/buzz-service/internal/provider"
 	"github.com/elight/buzz-service/internal/queue"
 	"github.com/elight/buzz-service/internal/realtime"
 	"github.com/elight/buzz-service/internal/store"
@@ -12,7 +13,7 @@ import (
 	swagger "github.com/gofiber/swagger"
 )
 
-func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Producer, cfg *config.Config, gateway *realtime.Gateway) {
+func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Producer, cfg *config.Config, gateway *realtime.Gateway, registry *provider.Registry) {
 	// Global middleware
 	app.Use(recover.New())
 	app.Use(requestid.New())
@@ -101,6 +102,15 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	batches.Post("/send", RequireScope("batch:send"), batchHandler.SendBulk)
 	batches.Get("/:id", RequireScope("batch:read"), batchHandler.GetBatchStatus)
 	batches.Get("/", RequireScope("batch:read"), batchHandler.ListBatches)
+
+	// Provider configs (notification delivery providers)
+	providerHandler := NewProviderHandler(db, registry)
+	providers := v1.Group("/providers")
+	providers.Post("/", RequireScope("notification:send"), providerHandler.CreateProvider)
+	providers.Get("/", RequireScope("notification:read"), providerHandler.ListProviders)
+	providers.Get("/:id", RequireScope("notification:read"), providerHandler.GetProvider)
+	providers.Patch("/:id", RequireScope("notification:send"), providerHandler.UpdateProvider)
+	providers.Delete("/:id", RequireScope("notification:send"), providerHandler.DeleteProvider)
 }
 
 // HealthCheck godoc
