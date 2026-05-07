@@ -36,7 +36,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	webhookHandler := NewWebhookHandler(db)
 	webhooks := app.Group("/webhooks")
 	webhooks.Post("/ses", webhookHandler.HandleSESWebhook)
-	webhooks.Post("/notifylk", webhookHandler.HandleNotifyLKWebhook)
+	webhooks.Post("/textlk", webhookHandler.HandleTextLKWebhook)
 	webhooks.Post("/twilio", webhookHandler.HandleTwilioWebhook)
 	webhooks.Post("/generic", webhookHandler.HandleGenericWebhook)
 

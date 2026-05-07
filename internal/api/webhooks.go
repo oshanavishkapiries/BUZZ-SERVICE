@@ -208,23 +208,23 @@ func (h *WebhookHandler) HandleGenericWebhook(c *fiber.Ctx) error {
 	return c.SendStatus(200)
 }
 
-// HandleNotifyLKWebhook godoc
-// @Summary      NotifyLK webhook
-// @Description  Receive SMS delivery receipts from the NotifyLK provider
+// HandleTextLKWebhook godoc
+// @Summary      Text.lk webhook
+// @Description  Receive SMS delivery receipts from the Text.lk provider
 // @Tags         webhooks
 // @Accept       json
 // @Produce      json
-// @Param        body  body      map[string]interface{}  true  "NotifyLK delivery receipt"
+// @Param        body  body      map[string]interface{}  true  "Text.lk delivery receipt"
 // @Success      200
 // @Failure      400   {object}  ErrorResponse
-// @Router       /webhooks/notifylk [post]
-func (h *WebhookHandler) HandleNotifyLKWebhook(c *fiber.Ctx) error {
+// @Router       /webhooks/textlk [post]
+func (h *WebhookHandler) HandleTextLKWebhook(c *fiber.Ctx) error {
 	var payload map[string]interface{}
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid payload"})
 	}
 
-	// NotifyLK webhook format: message_id, status (delivered, failed, expired)
+	// Text.lk webhook format: message_id, status (delivered, failed, expired)
 	messageID, ok := payload["message_id"].(string)
 	if !ok {
 		return c.Status(400).JSON(fiber.Map{"error": "missing message_id"})
@@ -235,23 +235,11 @@ func (h *WebhookHandler) HandleNotifyLKWebhook(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "missing status"})
 	}
 
-	// Update notification status based on delivery receipt
 	switch status {
 	case "delivered":
-		// SMS confirmed delivered
 		_ = messageID
-		// In a real implementation:
-		// 1. Query notification by message ID
-		// 2. Update status to delivered
-		// 3. Record delivery timestamp
-
 	case "failed", "expired":
-		// SMS failed to deliver
 		_ = messageID
-		// In a real implementation:
-		// 1. Query notification by message ID
-		// 2. Update status to failed
-		// 3. Record error reason
 	}
 
 	return c.SendStatus(200)

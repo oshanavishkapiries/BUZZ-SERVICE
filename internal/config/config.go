@@ -16,9 +16,9 @@ type Config struct {
 	Email    EmailConfig
 	AWS      AWSConfig
 	SMTP     SMTPConfig
-	SMS      SMSConfig
-	NotifyLK NotifyLKConfigStruct
-	Twilio   TwilioConfigStruct
+	SMS    SMSConfig
+	TextLK TextLKConfigStruct
+	Twilio TwilioConfigStruct
 	Push     PushConfig
 }
 
@@ -86,9 +86,8 @@ type SMSConfig struct {
 	DefaultSenderID    string
 }
 
-type NotifyLKConfigStruct struct {
-	UserID   string
-	APIKey   string
+type TextLKConfigStruct struct {
+	APIToken string
 	SenderID string
 }
 
@@ -252,10 +251,9 @@ func Load() (*Config, error) {
 			MaxSegments:        viper.GetInt("SMS_MAX_SEGMENTS"),
 			DefaultSenderID:    viper.GetString("SMS_DEFAULT_SENDER_ID"),
 		},
-		NotifyLK: NotifyLKConfigStruct{
-			UserID:   viper.GetString("NOTIFYLK_USER_ID"),
-			APIKey:   viper.GetString("NOTIFYLK_API_KEY"),
-			SenderID: viper.GetString("NOTIFYLK_SENDER_ID"),
+		TextLK: TextLKConfigStruct{
+			APIToken: viper.GetString("TEXTLK_API_TOKEN"),
+			SenderID: viper.GetString("TEXTLK_SENDER_ID"),
 		},
 		Twilio: TwilioConfigStruct{
 			AccountSID:          viper.GetString("TWILIO_ACCOUNT_SID"),

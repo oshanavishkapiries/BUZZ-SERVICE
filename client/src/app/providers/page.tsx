@@ -16,7 +16,7 @@ const CHANNELS: Channel[] = ['email', 'sms', 'push', 'in_app'];
 
 const PROVIDER_TYPES: Record<Channel, string[]> = {
   email:  ['ses', 'smtp'],
-  sms:    ['twilio', 'notifylk'],
+  sms:    ['twilio', 'textlk'],
   push:   ['fcm'],
   in_app: [],
 };
@@ -45,10 +45,9 @@ const CONFIG_TEMPLATES: Record<string, string> = {
     messaging_service_sid: '',
     rate_limit_per_second: 10,
   }, null, 2),
-  notifylk: JSON.stringify({
-    user_id: 'your_user_id',
-    api_key: 'your_api_key',
-    sender_id: 'NOTIFY',
+  textlk: JSON.stringify({
+    api_token: 'your_api_token',
+    sender_id: 'YourSender',
     rate_limit_per_second: 10,
   }, null, 2),
   fcm: JSON.stringify({

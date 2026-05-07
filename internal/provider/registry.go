@@ -189,10 +189,9 @@ func buildSMSProvider(providerType string, cfg map[string]interface{}) (Provider
 		})
 		return sms.NewRateLimitedSMSProvider(p, rateLimit), nil
 
-	case "notifylk":
-		p := sms.NewNotifyLKProvider(sms.NotifyLKConfig{
-			UserID:   getString(cfg, "user_id"),
-			APIKey:   getString(cfg, "api_key"),
+	case "textlk":
+		p := sms.NewTextLKProvider(sms.TextLKConfig{
+			APIToken: getString(cfg, "api_token"),
 			SenderID: getString(cfg, "sender_id"),
 		})
 		return sms.NewRateLimitedSMSProvider(p, rateLimit), nil

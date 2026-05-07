@@ -1,3 +1,5 @@
-/api/v1/notifications?channel=push&status=sent&limit=1
+In this application's provider section, SMS providers, we have Notify LK. I want to remove that provider and replace it with this new provider.
 
-In the client application dashboard page, within the notification matrix section, the current implementation calls the API multiple times to get matrix details. I want to create a single API to retrieve all the matrix details.
+provider : TEXT.LK
+
+provider document read : /workspaces/BUZZ-SERVICE/textme.md

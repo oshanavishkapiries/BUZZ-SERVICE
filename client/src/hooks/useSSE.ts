@@ -21,7 +21,7 @@ export function useSSE(userId: string, options: UseSSEOptions = {}) {
     if (eventSourceRef.current) return;
 
     const { apiUrl, apiKey } = getConfig();
-    const url = `${apiUrl}/api/v1/stream?Authorization=Bearer%20${encodeURIComponent(apiKey)}&X-User-ID=${encodeURIComponent(userId)}`;
+    const url = `${apiUrl}/api/v1/stream?token=${encodeURIComponent(apiKey)}&user_id=${encodeURIComponent(userId)}`;
 
     setStatus('connecting');
     setError(null);

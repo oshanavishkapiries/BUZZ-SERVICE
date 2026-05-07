@@ -56,13 +56,12 @@ func NewEmailProvider(ctx context.Context, cfg *config.Config) (email.EmailProvi
 // NewSMSProvider creates an SMS provider based on configuration
 func NewSMSProvider(cfg *config.Config) (sms.SMSProvider, error) {
 	switch cfg.SMS.Provider {
-	case "notifylk":
-		notifyLKProvider := sms.NewNotifyLKProvider(sms.NotifyLKConfig{
-			UserID:   cfg.NotifyLK.UserID,
-			APIKey:   cfg.NotifyLK.APIKey,
-			SenderID: cfg.NotifyLK.SenderID,
+	case "textlk":
+		textLKProvider := sms.NewTextLKProvider(sms.TextLKConfig{
+			APIToken: cfg.TextLK.APIToken,
+			SenderID: cfg.TextLK.SenderID,
 		})
-		rateLimited := sms.NewRateLimitedSMSProvider(notifyLKProvider, cfg.SMS.RateLimitPerSecond)
+		rateLimited := sms.NewRateLimitedSMSProvider(textLKProvider, cfg.SMS.RateLimitPerSecond)
 		return rateLimited, nil
 
 	case "twilio":
@@ -76,11 +75,10 @@ func NewSMSProvider(cfg *config.Config) (sms.SMSProvider, error) {
 		return rateLimited, nil
 
 	case "router":
-		// Create NotifyLK provider (primary for Sri Lanka)
-		notifyLKProvider := sms.NewNotifyLKProvider(sms.NotifyLKConfig{
-			UserID:   cfg.NotifyLK.UserID,
-			APIKey:   cfg.NotifyLK.APIKey,
-			SenderID: cfg.NotifyLK.SenderID,
+		// Create Text.lk provider (primary for Sri Lanka)
+		textLKProvider := sms.NewTextLKProvider(sms.TextLKConfig{
+			APIToken: cfg.TextLK.APIToken,
+			SenderID: cfg.TextLK.SenderID,
 		})
 
 		// Create Twilio provider (fallback for international)
@@ -91,9 +89,9 @@ func NewSMSProvider(cfg *config.Config) (sms.SMSProvider, error) {
 			MessagingServiceSID: cfg.Twilio.MessagingServiceSID,
 		})
 
-		// Create router with NotifyLK as primary, Twilio as fallback
+		// Create router with Text.lk as primary for Sri Lanka, Twilio as fallback
 		router := sms.NewSMSRouter(
-			[]sms.SMSProvider{notifyLKProvider},
+			[]sms.SMSProvider{textLKProvider},
 			twilioProvider,
 		)
 
