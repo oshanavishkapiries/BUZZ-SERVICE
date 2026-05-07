@@ -28,10 +28,10 @@ const config: Config = {
       },
       colors: {
         accent: {
-          DEFAULT: '#f37726',
-          hover:   '#e0691f',
-          subtle:  '#fff4ec',
-          muted:   '#fde8d4',
+          DEFAULT: '#F9070F',
+          hover:   '#d10609',
+          subtle:  '#ffe6e5',
+          muted:   '#ffccca',
         },
       },
       animation: {
