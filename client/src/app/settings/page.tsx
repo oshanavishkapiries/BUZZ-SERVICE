@@ -2,18 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { getConfig, setConfig } from '@/lib/config';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Settings as SettingsIcon, Save, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsPage() {
   const [apiUrl, setApiUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [userId, setUserId] = useState('');
   const [saved, setSaved] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   useEffect(() => {
-    const config = getConfig();
-    setApiUrl(config.apiUrl);
-    setApiKey(config.apiKey);
-    setUserId(config.userId);
+    const c = getConfig();
+    setApiUrl(c.apiUrl);
+    setApiKey(c.apiKey);
+    setUserId(c.userId);
   }, []);
 
   const handleSave = () => {
@@ -23,71 +30,97 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-3xl font-bold mb-8 text-[var(--text-primary)]">Settings</h1>
+    <div className="space-y-6 max-w-xl">
+      <div className="page-header">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Settings</h1>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">Configure your API connection</p>
+      </div>
 
-      <div className="card p-6 space-y-6">
-        <div>
-          <label className="label-base">API Base URL</label>
-          <input
-            type="text"
-            value={apiUrl}
-            onChange={(e) => setApiUrl(e.target.value)}
-            className="input-base w-full mt-1"
-            placeholder="http://localhost:8080"
-          />
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
-            The base URL of your Buzz Notification Service API
-          </p>
-        </div>
-
-        <div>
-          <label className="label-base">API Key</label>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="input-base w-full mt-1 font-mono"
-            placeholder="buzz_..."
-          />
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Your Buzz API key (e.g., buzz_test_key_123)
-          </p>
-        </div>
-
-        <div>
-          <label className="label-base">User ID</label>
-          <input
-            type="text"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            className="input-base w-full mt-1"
-            placeholder="user-123"
-          />
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
-            The end-user ID for inbox and SSE subscriptions
-          </p>
-        </div>
-
-        <button onClick={handleSave} className="btn-primary w-full">
-          Save Settings
-        </button>
-
-        {saved && (
-          <div className="border border-green-400 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-3 rounded">
-            Settings saved successfully!
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <SettingsIcon size={14} className="text-[var(--accent)]" />
+            API Configuration
+          </CardTitle>
+          <CardDescription>Settings are stored in your browser&apos;s localStorage.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div>
+            <Label htmlFor="apiUrl">API Base URL</Label>
+            <Input
+              id="apiUrl"
+              value={apiUrl}
+              onChange={e => setApiUrl(e.target.value)}
+              placeholder="http://localhost:8080"
+            />
+            <p className="text-xs text-[var(--text-muted)] mt-1">Base URL of your Buzz service</p>
           </div>
-        )}
-      </div>
 
-      <div className="mt-8 card border border-[var(--accent)] p-6 bg-[var(--bg-secondary)]">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Current Configuration</h2>
-        <div className="text-sm space-y-1 font-mono text-[var(--text-secondary)]">
-          <p>API URL: <span className="text-[var(--text-primary)]">{apiUrl}</span></p>
-          <p>API Key: <span className="text-[var(--text-primary)]">{apiKey ? '•'.repeat(10) : '(not set)'}</span></p>
-          <p>User ID: <span className="text-[var(--text-primary)]">{userId}</span></p>
-        </div>
-      </div>
+          <div>
+            <Label htmlFor="apiKey">API Key</Label>
+            <div className="relative">
+              <Input
+                id="apiKey"
+                type={showKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={e => setApiKey(e.target.value)}
+                placeholder="buzz_..."
+                className="pr-10 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(v => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="userId">User ID</Label>
+            <Input
+              id="userId"
+              value={userId}
+              onChange={e => setUserId(e.target.value)}
+              placeholder="user-123"
+            />
+            <p className="text-xs text-[var(--text-muted)] mt-1">Used for inbox and SSE subscriptions</p>
+          </div>
+
+          <Button onClick={handleSave} className="w-full">
+            <Save size={14} />
+            Save Settings
+          </Button>
+
+          {saved && (
+            <Alert variant="success">
+              <AlertDescription>Settings saved successfully.</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Current config display */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-0 font-mono text-xs">
+            {[
+              ['API_URL',  apiUrl  || '(not set)'],
+              ['API_KEY',  apiKey  ? '•'.repeat(Math.min(apiKey.length, 20)) : '(not set)'],
+              ['USER_ID',  userId  || '(not set)'],
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-center gap-3 py-1.5 border-b border-[var(--border-color)] last:border-0">
+                <span className="text-[var(--text-muted)] w-20 shrink-0">{k}</span>
+                <span className="text-[var(--text-primary)] truncate">{v}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

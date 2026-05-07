@@ -1,20 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { Channel, Priority, Notification } from '@/lib/types';
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Send, List, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const STATUS_VARIANT: Record<string, 'success' | 'info' | 'warning' | 'destructive' | 'secondary'> = {
+  delivered: 'success',
+  sent:       'info',
+  queued:     'warning',
+  processing: 'warning',
+  failed:     'destructive',
+};
+
+const CHANNEL_VARIANT: Record<string, 'default' | 'info' | 'secondary' | 'warning'> = {
+  email:  'default',
+  sms:    'info',
+  push:   'warning',
+  in_app: 'secondary',
+};
 
 export default function NotificationsPage() {
   const [tab, setTab] = useState<'send' | 'list'>('send');
 
-  // Send form state
   const [to, setTo] = useState('');
   const [channel, setChannel] = useState<Channel>('email');
   const [priority, setPriority] = useState<Priority>('normal');
@@ -24,35 +40,25 @@ export default function NotificationsPage() {
   const [sendResult, setSendResult] = useState<Notification | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
 
-  // List state
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterChannel, setFilterChannel] = useState('');
   const [offset, setOffset] = useState(0);
   const [listError, setListError] = useState<string | null>(null);
-  const limit = 10;
+  const limit = 20;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
     setSendError(null);
     setSendResult(null);
-
     try {
-      const result = await api.sendNotification({
-        to,
-        channel,
-        priority,
-        subject: subject || undefined,
-        body,
-      });
-      setSendResult(result);
-      setTo('');
-      setSubject('');
-      setBody('');
-    } catch (err) {
-      setSendError(err instanceof Error ? err.message : 'Failed to send notification');
+      const r = await api.sendNotification({ to, channel, priority, subject: subject || undefined, body });
+      setSendResult(r);
+      setTo(''); setSubject(''); setBody('');
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Failed');
     } finally {
       setSending(false);
     }
@@ -62,210 +68,191 @@ export default function NotificationsPage() {
     setLoading(true);
     setListError(null);
     try {
-      const result = await api.listNotifications({
-        status: filterStatus || undefined,
-        channel: filterChannel || undefined,
-        limit,
-        offset,
-      });
-      setNotifications(result.data || []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load notifications';
-      setListError(message);
+      const r = await api.listNotifications({ status: filterStatus || undefined, channel: filterChannel || undefined, limit, offset });
+      setNotifications(r.data || []);
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : 'Failed');
       setNotifications([]);
-      console.error('Failed to load notifications:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadNotifications();
-  }, [filterStatus, filterChannel, offset]);
+  useEffect(() => { loadNotifications(); }, [filterStatus, filterChannel, offset]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">Notifications</h1>
-        <p className="text-[var(--text-secondary)]">Send and monitor notifications</p>
+      <div className="page-header">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Notifications</h1>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">Send and inspect notifications</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-[var(--border-color)]">
-        <button
-          onClick={() => setTab('send')}
-          className={`px-4 py-3 font-medium transition-colors ${
-            tab === 'send'
-              ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          Send Notification
-        </button>
-        <button
-          onClick={() => setTab('list')}
-          className={`px-4 py-3 font-medium transition-colors ${
-            tab === 'list'
-              ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          View Notifications
-        </button>
+      {/* Tab bar */}
+      <div className="flex gap-1 p-1 rounded-[var(--radius)] bg-[var(--bg-secondary)] w-fit border border-[var(--border-color)]">
+        {[
+          { id: 'send', label: 'Send',   icon: Send },
+          { id: 'list', label: 'Browse', icon: List },
+        ].map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setTab(id as 'send' | 'list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius)] text-sm font-medium transition-colors ${
+              tab === id
+                ? 'bg-[var(--surface-1)] text-[var(--text-primary)] shadow-sm border border-[var(--border-color)]'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Icon size={13} />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Send Tab */}
       {tab === 'send' && (
-        <Card className="p-6 max-w-2xl">
-          <form onSubmit={handleSend} className="space-y-4">
-            <div>
-              <Label htmlFor="to">Recipient</Label>
-              <Input
-                id="to"
-                type="text"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                placeholder="user@example.com or phone number or user ID"
-                className="mt-1"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+        <Card className="max-w-lg">
+          <CardHeader>
+            <CardTitle>New Notification</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSend} className="space-y-4">
               <div>
-                <Label htmlFor="channel">Channel</Label>
-                <Select id="channel" value={channel} onChange={(e) => setChannel(e.target.value as Channel)} className="mt-1">
+                <Label htmlFor="to">Recipient</Label>
+                <Input id="to" value={to} onChange={e => setTo(e.target.value)}
+                  placeholder="email / phone / user ID" required />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="ch">Channel</Label>
+                  <Select id="ch" value={channel} onChange={e => setChannel(e.target.value as Channel)}>
+                    <option value="email">Email</option>
+                    <option value="sms">SMS</option>
+                    <option value="push">Push</option>
+                    <option value="in_app">In-App</option>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="pri">Priority</Label>
+                  <Select id="pri" value={priority} onChange={e => setPriority(e.target.value as Priority)}>
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </Select>
+                </div>
+              </div>
+
+              {channel === 'email' && (
+                <div>
+                  <Label htmlFor="subject">Subject</Label>
+                  <Input id="subject" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Email subject" />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="body">Body</Label>
+                <Textarea id="body" value={body} onChange={e => setBody(e.target.value)}
+                  placeholder="Notification content…" className="min-h-[100px]" required />
+              </div>
+
+              <Button type="submit" disabled={sending} className="w-full">
+                <Send size={14} />
+                {sending ? 'Sending…' : 'Send Notification'}
+              </Button>
+
+              {sendError && <Alert variant="destructive"><AlertDescription>{sendError}</AlertDescription></Alert>}
+              {sendResult && (
+                <Alert variant="success">
+                  <AlertDescription>
+                    Sent — ID: <span className="font-mono">{sendResult.id}</span> &middot; Status: <Badge variant={STATUS_VARIANT[sendResult.status] ?? 'secondary'}>{sendResult.status}</Badge>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === 'list' && (
+        <div className="space-y-4">
+          {listError && <Alert variant="destructive"><AlertDescription>{listError}</AlertDescription></Alert>}
+
+          {/* Filters */}
+          <Card>
+            <CardContent className="flex gap-4 py-3">
+              <div className="flex-1">
+                <Label htmlFor="sf">Status</Label>
+                <Select id="sf" value={filterStatus} onChange={e => { setOffset(0); setFilterStatus(e.target.value); }}>
+                  <option value="">All Statuses</option>
+                  <option value="queued">Queued</option>
+                  <option value="processing">Processing</option>
+                  <option value="sent">Sent</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="failed">Failed</option>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="cf">Channel</Label>
+                <Select id="cf" value={filterChannel} onChange={e => { setOffset(0); setFilterChannel(e.target.value); }}>
+                  <option value="">All Channels</option>
                   <option value="email">Email</option>
                   <option value="sms">SMS</option>
                   <option value="push">Push</option>
                   <option value="in_app">In-App</option>
                 </Select>
               </div>
-
-              <div>
-                <Label htmlFor="priority">Priority</Label>
-                <Select id="priority" value={priority} onChange={(e) => setPriority(e.target.value as Priority)} className="mt-1">
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </Select>
-              </div>
-            </div>
-
-            {['email'].includes(channel) && (
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <Input id="subject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Message subject" className="mt-1" />
-              </div>
-            )}
-
-            <div>
-              <Label htmlFor="body">Body</Label>
-              <Textarea id="body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message content" className="mt-1 min-h-24" required />
-            </div>
-
-            <Button type="submit" disabled={sending} className="w-full">
-              {sending ? 'Sending...' : 'Send Notification'}
-            </Button>
-
-            {sendError && <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">{sendError}</div>}
-
-            {sendResult && (
-              <div className="text-green-600 dark:text-green-400 text-sm border border-green-300 bg-green-50 dark:bg-green-900/20 p-3" style={{ borderRadius: '0.25rem' }}>
-                <strong>Sent!</strong> ID: {sendResult.id} | Status: {sendResult.status}
-              </div>
-            )}
-          </form>
-        </Card>
-      )}
-
-      {/* List Tab */}
-      {tab === 'list' && (
-        <div className="space-y-4">
-          {listError && (
-            <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3" style={{ borderRadius: '0.25rem' }}>
-              {listError}
-            </div>
-          )}
-
-          <Card className="p-4 grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="status-filter">Filter by Status</Label>
-              <Select id="status-filter" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="mt-1">
-                <option value="">All Statuses</option>
-                <option value="queued">Queued</option>
-                <option value="processing">Processing</option>
-                <option value="sent">Sent</option>
-                <option value="delivered">Delivered</option>
-                <option value="failed">Failed</option>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="channel-filter">Filter by Channel</Label>
-              <Select id="channel-filter" value={filterChannel} onChange={(e) => setFilterChannel(e.target.value)} className="mt-1">
-                <option value="">All Channels</option>
-                <option value="email">Email</option>
-                <option value="sms">SMS</option>
-                <option value="push">Push</option>
-                <option value="in_app">In-App</option>
-              </Select>
-            </div>
+            </CardContent>
           </Card>
 
-          {loading ? (
-            <Card className="p-6 text-center text-[var(--text-secondary)]">Loading...</Card>
-          ) : (
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-                      <th className="text-left p-3 font-semibold">Channel</th>
-                      <th className="text-left p-3 font-semibold">Status</th>
-                      <th className="text-left p-3 font-semibold">Recipient</th>
-                      <th className="text-left p-3 font-semibold">Body</th>
-                      <th className="text-left p-3 font-semibold">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {notifications.length === 0 ? (
+          <Card>
+            {loading ? (
+              <div className="p-8 text-center text-sm text-[var(--text-muted)]">Loading…</div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
                       <tr>
-                        <td colSpan={5} className="p-4 text-center text-[var(--text-secondary)]">
-                          No notifications found
-                        </td>
+                        <th>Channel</th>
+                        <th>Status</th>
+                        <th>Recipient</th>
+                        <th>Body</th>
+                        <th>Date</th>
                       </tr>
-                    ) : (
-                      notifications.map((n) => (
-                        <tr key={n.id} className="border-b border-[var(--border-color)]">
-                          <td className="p-3">
-                            <span className="inline-block px-2 py-1 bg-[var(--accent)] text-white text-xs rounded capitalize">{n.channel}</span>
-                          </td>
-                          <td className="p-3 capitalize">{n.status}</td>
-                          <td className="p-3 text-xs font-mono text-[var(--text-secondary)]">{JSON.stringify(n.recipient).slice(0, 30)}...</td>
-                          <td className="p-3 text-xs truncate max-w-xs">{n.body}</td>
-                          <td className="p-3 text-xs text-[var(--text-secondary)]">{new Date(n.created_at).toLocaleDateString()}</td>
+                    </thead>
+                    <tbody>
+                      {notifications.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="text-center py-12 text-[var(--text-muted)]">No notifications found</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {notifications.length > 0 && (
-                <div className="p-4 border-t border-[var(--border-color)] flex justify-between items-center">
-                  <Button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))} variant="outline" size="sm">
-                    Previous
-                  </Button>
-                  <span className="text-sm text-[var(--text-secondary)]">Offset: {offset}</span>
-                  <Button onClick={() => setOffset(offset + limit)} variant="outline" size="sm">
-                    Next
-                  </Button>
+                      ) : notifications.map(n => (
+                        <tr key={n.id}>
+                          <td><Badge variant={CHANNEL_VARIANT[n.channel] ?? 'secondary'}>{n.channel}</Badge></td>
+                          <td><Badge variant={STATUS_VARIANT[n.status] ?? 'secondary'}>{n.status}</Badge></td>
+                          <td className="font-mono text-xs text-[var(--text-secondary)] max-w-[160px] truncate">{JSON.stringify(n.recipient)}</td>
+                          <td className="max-w-[200px] truncate text-xs">{n.body}</td>
+                          <td className="text-xs text-[var(--text-muted)] whitespace-nowrap">{new Date(n.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </Card>
-          )}
+                {notifications.length > 0 && (
+                  <div className="flex items-center justify-between px-4 py-2.5 border-t border-[var(--border-color)]">
+                    <Button variant="outline" size="sm" disabled={offset === 0}
+                      onClick={() => setOffset(Math.max(0, offset - limit))}>
+                      <ChevronLeft size={14} /> Previous
+                    </Button>
+                    <span className="text-xs text-[var(--text-muted)]">Showing {offset + 1}–{offset + notifications.length}</span>
+                    <Button variant="outline" size="sm" disabled={notifications.length < limit}
+                      onClick={() => setOffset(offset + limit)}>
+                      Next <ChevronRight size={14} />
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
         </div>
       )}
     </div>

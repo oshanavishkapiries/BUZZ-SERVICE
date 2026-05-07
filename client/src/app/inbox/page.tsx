@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { InboxEntry } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Inbox as InboxIcon, CheckCheck, Trash2, Mail, MailOpen } from 'lucide-react';
 
 export default function InboxPage() {
   const [entries, setEntries] = useState<InboxEntry[]>([]);
@@ -12,107 +15,117 @@ export default function InboxPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const loadInbox = async () => {
+  const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await api.getInbox({ limit: 50 });
-      setEntries(result.data || []);
-      setUnreadCount(result.unread_count || 0);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load inbox';
-      setError(message);
+      const r = await api.getInbox({ limit: 50 });
+      setEntries(r.data || []);
+      setUnreadCount(r.unread_count || 0);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load inbox');
       setEntries([]);
-      console.error('Failed to load inbox:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadInbox();
-  }, []);
+  useEffect(() => { load(); }, []);
 
-  const handleMarkRead = async (id: string) => {
-    try {
-      await api.markAsRead(id);
-      await loadInbox();
-    } catch (err) {
-      console.error('Failed to mark as read:', err);
-    }
+  const markRead = async (id: string) => {
+    try { await api.markAsRead(id); await load(); }
+    catch (e) { console.error(e); }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await api.deleteInboxEntry(id);
-      await loadInbox();
-    } catch (err) {
-      console.error('Failed to delete:', err);
-    }
+  const del = async (id: string) => {
+    try { await api.deleteInboxEntry(id); await load(); }
+    catch (e) { console.error(e); }
   };
 
-  const handleMarkAllRead = async () => {
-    try {
-      await api.markAllAsRead();
-      await loadInbox();
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-    }
+  const markAllRead = async () => {
+    try { await api.markAllAsRead(); await load(); }
+    catch (e) { console.error(e); }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="page-header flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">Inbox</h1>
-          <p className="text-[var(--text-secondary)]">
-            {entries.length} messages, {unreadCount} unread
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Inbox</h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            {entries.length} messages
+            {unreadCount > 0 && (
+              <> &middot; <span className="text-[var(--accent)] font-medium">{unreadCount} unread</span></>
+            )}
           </p>
         </div>
         {unreadCount > 0 && (
-          <Button onClick={handleMarkAllRead}>Mark All as Read</Button>
+          <Button variant="outline" size="sm" onClick={markAllRead}>
+            <CheckCheck size={14} />
+            Mark all read
+          </Button>
         )}
       </div>
 
-      {error && (
-        <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3" style={{ borderRadius: '0.25rem' }}>
-          {error}
-        </div>
-      )}
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
-      {loading ? (
-        <Card className="p-6 text-center">Loading...</Card>
-      ) : entries.length === 0 ? (
-        <Card className="p-6 text-center text-[var(--text-secondary)]">No messages</Card>
-      ) : (
-        <Card className="overflow-hidden">
-          <div className="divide-y divide-[var(--border-color)]">
-            {entries.map((entry) => (
-              <div key={entry.id} className={`p-4 ${entry.is_read ? '' : 'bg-[var(--accent)] bg-opacity-5'}`}>
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-semibold text-[var(--text-primary)]">{entry.title}</h3>
-                    <p className="text-sm text-[var(--text-secondary)] mt-1">{entry.body}</p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <InboxIcon size={14} className="text-[var(--accent)]" />
+            Messages
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-8 text-center text-sm text-[var(--text-muted)]">Loading…</div>
+          ) : entries.length === 0 ? (
+            <div className="empty-state">
+              <InboxIcon size={32} className="mb-3 opacity-30" />
+              <p className="text-sm">Your inbox is empty</p>
+            </div>
+          ) : (
+            <div>
+              {entries.map((entry, i) => (
+                <div
+                  key={entry.id}
+                  className={`flex items-start gap-4 px-5 py-4 border-b border-[var(--border-color)] last:border-0 transition-colors ${
+                    !entry.is_read ? 'bg-[var(--accent-subtle)]' : ''
+                  }`}
+                >
+                  <div className="mt-0.5 shrink-0">
+                    {entry.is_read
+                      ? <MailOpen size={15} className="text-[var(--text-muted)]" />
+                      : <Mail    size={15} className="text-[var(--accent)]" />
+                    }
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{entry.title}</span>
+                      {!entry.is_read && <Badge variant="default">New</Badge>}
+                    </div>
+                    <p className="text-sm text-[var(--text-secondary)] truncate">{entry.body}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">
+                      {new Date(entry.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
                     {!entry.is_read && (
-                      <Button size="sm" variant="secondary" onClick={() => handleMarkRead(entry.id)}>
-                        Read
+                      <Button variant="ghost" size="icon" onClick={() => markRead(entry.id)} title="Mark read" className="h-7 w-7">
+                        <CheckCheck size={13} />
                       </Button>
                     )}
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(entry.id)}>
-                      Delete
+                    <Button variant="ghost" size="icon" onClick={() => del(entry.id)} title="Delete"
+                      className="h-7 w-7 text-[var(--destructive)] hover:text-[var(--destructive-hover)] hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Trash2 size={13} />
                     </Button>
                   </div>
                 </div>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  {new Date(entry.created_at).toLocaleString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -11,43 +11,31 @@ const config: Config = {
     extend: {
       borderRadius: {
         DEFAULT: '0.25rem',
-        none: '0',
-        sm: '0.125rem',
-        md: '0.375rem',
-        lg: '0.5rem',
+        sm:   '0.125rem',
+        md:   '0.375rem',
+        lg:   '0.5rem',
+        xl:   '0.75rem',
         full: '9999px',
       },
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"Fira Code"', '"Source Code Pro"', 'ui-monospace', 'monospace'],
+      },
+      fontSize: {
+        '2xs': ['0.65rem', { lineHeight: '1rem' }],
+        xs:    ['0.75rem', { lineHeight: '1.125rem' }],
+        sm:    ['0.875rem', { lineHeight: '1.375rem' }],
+      },
       colors: {
-        // Jupyter Notebook inspired palette
-        jupyter: {
-          // Orange accent
-          orange: '#F37726',
-          'orange-light': '#F5A84A',
-          'orange-dark': '#D46B1F',
-
-          // Light mode grays
-          'light-bg': '#FFFFFF',
-          'light-surface': '#F8F9FA',
-          'light-border': '#E1E4E8',
-          'light-text': '#24292E',
-          'light-text-secondary': '#6A737D',
-
-          // Dark mode grays
-          'dark-bg': '#1E1E1E',
-          'dark-surface': '#2D2D2D',
-          'dark-border': '#404040',
-          'dark-text': '#E8E8E8',
-          'dark-text-secondary': '#989898',
+        accent: {
+          DEFAULT: '#f37726',
+          hover:   '#e0691f',
+          subtle:  '#fff4ec',
+          muted:   '#fde8d4',
         },
       },
-      fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
-        mono: ['"Fira Code"', '"Source Code Pro"', 'Menlo', 'Monaco', 'monospace'],
-      },
-      boxShadow: {
-        'jupyter-sm': '0 1px 3px rgba(0, 0, 0, 0.08)',
-        'jupyter': '0 1px 8px rgba(0, 0, 0, 0.12)',
-        'jupyter-lg': '0 4px 12px rgba(0, 0, 0, 0.15)',
+      animation: {
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },

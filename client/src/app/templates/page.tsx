@@ -3,226 +3,205 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Template, Channel } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FileText, Plus, Trash2, Tag } from 'lucide-react';
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'list' | 'create'>('list');
+  const [listError, setListError] = useState<string | null>(null);
 
-  // Form state
   const [name, setName] = useState('');
   const [channel, setChannel] = useState<Channel>('email');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [variables, setVariables] = useState('');
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [listError, setListError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
-  const loadTemplates = async () => {
+  const load = async () => {
     setLoading(true);
     setListError(null);
     try {
-      const result = await api.listTemplates({ limit: 100 });
-      setTemplates(result.data || []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load templates';
-      setListError(message);
+      const r = await api.listTemplates({ limit: 100 });
+      setTemplates(r.data || []);
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : 'Failed');
       setTemplates([]);
-      console.error('Failed to load templates:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadTemplates();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
-    setError(null);
-
+    setCreateError(null);
     try {
       await api.createTemplate({
-        name,
-        channel,
+        name, channel,
         subject: subject || undefined,
         body,
-        variables: variables.split(',').map((v) => v.trim()).filter(Boolean),
+        variables: variables.split(',').map(v => v.trim()).filter(Boolean),
       });
-      setName('');
-      setSubject('');
-      setBody('');
-      setVariables('');
+      setName(''); setSubject(''); setBody(''); setVariables('');
       setTab('list');
-      await loadTemplates();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create template');
+      await load();
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : 'Failed');
     } finally {
       setCreating(false);
     }
   };
 
-  const handleDelete = async (name: string) => {
-    if (confirm('Delete this template?')) {
-      try {
-        await api.deleteTemplate(name);
-        await loadTemplates();
-      } catch (err) {
-        console.error('Failed to delete:', err);
-      }
-    }
+  const del = async (name: string) => {
+    if (!confirm(`Delete template "${name}"?`)) return;
+    try { await api.deleteTemplate(name); await load(); }
+    catch (e) { console.error(e); }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">Templates</h1>
-        <p className="text-[var(--text-secondary)]">Manage reusable notification templates</p>
+      <div className="page-header flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Templates</h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">Reusable notification templates</p>
+        </div>
+        <Button onClick={() => setTab(tab === 'create' ? 'list' : 'create')}>
+          <Plus size={14} />
+          {tab === 'create' ? 'Back to list' : 'New Template'}
+        </Button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-[var(--border-color)]">
-        <button
-          onClick={() => setTab('list')}
-          className={`px-4 py-3 font-medium transition-colors ${
-            tab === 'list'
-              ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          Templates
-        </button>
-        <button
-          onClick={() => setTab('create')}
-          className={`px-4 py-3 font-medium transition-colors ${
-            tab === 'create'
-              ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          Create
-        </button>
-      </div>
+      {tab === 'create' && (
+        <Card className="max-w-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus size={14} className="text-[var(--accent)]" />
+              New Template
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <Label htmlFor="tname">Template Name</Label>
+                <Input id="tname" value={name} onChange={e => setName(e.target.value)}
+                  placeholder="welcome_email" required />
+              </div>
+              <div>
+                <Label htmlFor="tch">Channel</Label>
+                <Select id="tch" value={channel} onChange={e => setChannel(e.target.value as Channel)}>
+                  <option value="email">Email</option>
+                  <option value="sms">SMS</option>
+                  <option value="push">Push</option>
+                  <option value="in_app">In-App</option>
+                </Select>
+              </div>
+              {channel === 'email' && (
+                <div>
+                  <Label htmlFor="tsubj">Subject</Label>
+                  <Input id="tsubj" value={subject} onChange={e => setSubject(e.target.value)}
+                    placeholder="Welcome {{name}}!" required />
+                </div>
+              )}
+              <div>
+                <Label htmlFor="tbody">Body</Label>
+                <Textarea id="tbody" value={body} onChange={e => setBody(e.target.value)}
+                  placeholder="Hi {{name}}, welcome to…" className="min-h-[100px]" required />
+              </div>
+              <div>
+                <Label htmlFor="tvars">Variables (comma-separated)</Label>
+                <Input id="tvars" value={variables} onChange={e => setVariables(e.target.value)}
+                  placeholder="name, company, url" />
+                <p className="text-xs text-[var(--text-muted)] mt-1">These map to <code>{'{{variable}}'}</code> in your template</p>
+              </div>
+              {createError && <Alert variant="destructive"><AlertDescription>{createError}</AlertDescription></Alert>}
+              <Button type="submit" disabled={creating} className="w-full">
+                <FileText size={14} />
+                {creating ? 'Creating…' : 'Create Template'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {tab === 'list' && (
-        <>
-          {listError && (
-            <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
-              {listError}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="card p-6 text-center">Loading...</div>
-          ) : templates.length === 0 ? (
-            <div className="card p-6 text-center text-[var(--text-secondary)]">No templates found</div>
-          ) : (
-            <div className="card overflow-hidden">
-              <table className="w-full text-sm">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText size={14} className="text-[var(--accent)]" />
+              Templates
+              {templates.length > 0 && (
+                <Badge variant="secondary">{templates.length}</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {listError && (
+              <div className="p-5"><Alert variant="destructive"><AlertDescription>{listError}</AlertDescription></Alert></div>
+            )}
+            {loading ? (
+              <div className="p-8 text-center text-sm text-[var(--text-muted)]">Loading…</div>
+            ) : templates.length === 0 ? (
+              <div className="empty-state">
+                <FileText size={28} className="mb-3 opacity-30" />
+                <p className="text-sm">No templates yet</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => setTab('create')}>
+                  <Plus size={13} /> Create one
+                </Button>
+              </div>
+            ) : (
+              <table className="data-table">
                 <thead>
-                  <tr className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-                    <th className="text-left p-3 font-semibold">Name</th>
-                    <th className="text-left p-3 font-semibold">Channel</th>
-                    <th className="text-left p-3 font-semibold">Variables</th>
-                    <th className="text-right p-3 font-semibold">Actions</th>
+                  <tr>
+                    <th>Name</th>
+                    <th>Channel</th>
+                    <th>Variables</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {templates.map((t) => (
-                    <tr key={t.id} className="border-b border-[var(--border-color)]">
-                      <td className="p-3 font-medium">{t.name}</td>
-                      <td className="p-3 capitalize">{t.channels.join(', ')}</td>
-                      <td className="p-3 text-xs font-mono text-[var(--text-secondary)]">
-                        {t.variables.join(', ') || 'None'}
+                  {templates.map(t => (
+                    <tr key={t.id}>
+                      <td className="font-medium font-mono text-xs">{t.name}</td>
+                      <td>
+                        <Badge variant="secondary">{t.channels.join(', ')}</Badge>
                       </td>
-                      <td className="p-3 text-right">
-                        <button
-                          onClick={() => handleDelete(t.name)}
-                          className="text-red-600 hover:font-semibold text-sm"
-                        >
-                          Delete
-                        </button>
+                      <td>
+                        <div className="flex flex-wrap gap-1">
+                          {t.variables.length === 0
+                            ? <span className="text-xs text-[var(--text-muted)]">—</span>
+                            : t.variables.map(v => (
+                              <span key={v} className="flex items-center gap-0.5 text-[0.68rem] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">
+                                <Tag size={9} />
+                                {v}
+                              </span>
+                            ))}
+                        </div>
+                      </td>
+                      <td className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => del(t.name)}
+                          className="h-7 w-7 text-[var(--destructive)] hover:bg-red-50 dark:hover:bg-red-900/20">
+                          <Trash2 size={13} />
+                        </Button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
-        </>
-      )}
-
-      {tab === 'create' && (
-        <div className="card p-6 max-w-2xl">
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div>
-              <label className="label-base">Template Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="welcome_email"
-                className="input-base w-full mt-1"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label-base">Channel</label>
-              <select value={channel} onChange={(e) => setChannel(e.target.value as Channel)} className="input-base w-full mt-1">
-                <option value="email">Email</option>
-                <option value="sms">SMS</option>
-                <option value="push">Push</option>
-                <option value="in_app">In-App</option>
-              </select>
-            </div>
-
-            {channel === 'email' && (
-              <div>
-                <label className="label-base">Subject</label>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Welcome {{name}}!"
-                  className="input-base w-full mt-1"
-                  required
-                />
-              </div>
             )}
-
-            <div>
-              <label className="label-base">Body</label>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="Hello {{name}}, welcome!"
-                className="input-base w-full mt-1 min-h-24"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label-base">Variables (comma-separated)</label>
-              <input
-                type="text"
-                value={variables}
-                onChange={(e) => setVariables(e.target.value)}
-                placeholder="name, company, url"
-                className="input-base w-full mt-1"
-              />
-            </div>
-
-            <button type="submit" disabled={creating} className="btn-primary w-full">
-              {creating ? 'Creating...' : 'Create Template'}
-            </button>
-
-            {error && <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">{error}</div>}
-          </form>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

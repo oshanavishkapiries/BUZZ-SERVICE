@@ -3,39 +3,43 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Channel, NotificationStatus } from '@/lib/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { RotateCcw, Grid3X3 } from 'lucide-react';
 
-const channels: Channel[] = ['email', 'sms', 'push', 'in_app'];
-const statuses: NotificationStatus[] = ['queued', 'processing', 'sent', 'delivered', 'failed'];
+const CHANNELS: Channel[] = ['email', 'sms', 'push', 'in_app'];
+const STATUSES: NotificationStatus[] = ['queued', 'processing', 'sent', 'delivered', 'failed'];
 
-interface MatrixData {
-  [channel: string]: {
-    [status: string]: number;
-  };
+type Matrix = Record<string, Record<string, number>>;
+
+function cellStyle(n: number): string {
+  if (n === 0) return 'text-[var(--text-muted)]';
+  if (n < 5)   return 'text-[var(--accent)] font-medium';
+  if (n < 50)  return 'text-[var(--accent)] font-semibold';
+  return 'text-[var(--accent)] font-bold';
 }
 
 export function NotificationMatrix() {
-  const [data, setData] = useState<MatrixData>({});
+  const [data, setData] = useState<Matrix>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetch, setLastFetch] = useState<Date | null>(null);
 
   const fetchData = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      const newData: MatrixData = {};
-
-      for (const channel of channels) {
-        newData[channel] = {};
-        for (const status of statuses) {
-          const count = await api.countNotifications(channel, status);
-          newData[channel][status] = count;
+      const result: Matrix = {};
+      for (const ch of CHANNELS) {
+        result[ch] = {};
+        for (const st of STATUSES) {
+          result[ch][st] = await api.countNotifications(ch, st);
         }
       }
-
-      setData(newData);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch matrix data';
-      setError(message);
+      setData(result);
+      setLastFetch(new Date());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load matrix');
     } finally {
       setLoading(false);
     }
@@ -43,80 +47,68 @@ export function NotificationMatrix() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    const t = setInterval(fetchData, 30000);
+    return () => clearInterval(t);
   }, []);
 
-  if (loading) {
-    return (
-      <div className="card p-6">
-        <h2 className="text-xl font-bold mb-4 text-[var(--text-primary)]">Notification Status Matrix</h2>
-        <div className="animate-pulse flex flex-col space-y-2">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-10 bg-[var(--bg-secondary)] rounded" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="card border-red-400 p-4 text-red-700 dark:text-red-400">
-        Error: {error}
-        <button onClick={fetchData} className="ml-2 underline hover:font-semibold">
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  const getColor = (value: number): string => {
-    if (value === 0) return 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]';
-    if (value < 5) return 'bg-[var(--accent)] text-white opacity-30';
-    if (value < 20) return 'bg-[var(--accent)] text-white opacity-50';
-    if (value < 50) return 'bg-[var(--accent)] text-white opacity-70';
-    return 'bg-[var(--accent)] text-white';
-  };
-
   return (
-    <div className="card p-6">
-      <h2 className="text-xl font-bold mb-4 text-[var(--text-primary)]">Notification Status Matrix</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border-color)]">
-              <th className="text-left py-3 px-4 font-semibold text-[var(--text-primary)]">Channel</th>
-              {statuses.map((status) => (
-                <th
-                  key={status}
-                  className="text-center py-3 px-4 font-semibold text-[var(--text-primary)] capitalize"
-                >
-                  {status}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {channels.map((channel) => (
-              <tr key={channel} className="border-b border-[var(--border-color)] last:border-0">
-                <td className="py-3 px-4 font-medium text-[var(--text-primary)] capitalize">{channel}</td>
-                {statuses.map((status) => {
-                  const count = data[channel]?.[status] || 0;
-                  return (
-                    <td key={`${channel}-${status}`} className="text-center py-3 px-4">
-                      <div className={`inline-block px-3 py-1 rounded font-semibold ${getColor(count)}`}>
-                        {count}
-                      </div>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Grid3X3 size={14} className="text-[var(--accent)]" />
+            Notification Matrix
+          </CardTitle>
+          <div className="flex items-center gap-3">
+            {lastFetch && (
+              <span className="text-[0.7rem] text-[var(--text-muted)]">
+                Updated {lastFetch.toLocaleTimeString()}
+              </span>
+            )}
+            <Button variant="ghost" size="icon" onClick={fetchData} disabled={loading} className="h-7 w-7">
+              <RotateCcw size={12} className={loading ? 'animate-spin' : ''} />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {error ? (
+          <div className="px-5 py-8 text-center">
+            <p className="text-sm text-[var(--text-muted)] mb-3">{error}</p>
+            <Button variant="outline" size="sm" onClick={fetchData}>Retry</Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Channel</th>
+                  {STATUSES.map(s => <th key={s}>{s}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {CHANNELS.map(ch => (
+                  <tr key={ch}>
+                    <td className="font-medium capitalize">
+                      {ch.replace('_', ' ')}
                     </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-xs text-[var(--text-secondary)] mt-4">Auto-refreshes every 30 seconds</p>
-    </div>
+                    {STATUSES.map(st => {
+                      const n = data[ch]?.[st] ?? 0;
+                      return (
+                        <td key={st} className={`tabular-nums ${cellStyle(n)}`}>
+                          {loading ? (
+                            <div className="h-3 w-6 bg-[var(--bg-tertiary)] rounded animate-pulse" />
+                          ) : n}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

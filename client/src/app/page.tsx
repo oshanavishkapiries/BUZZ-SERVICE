@@ -1,9 +1,22 @@
 'use client';
 
-import { NotificationMatrix } from '@/components/NotificationMatrix';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { HealthResponse } from '@/lib/types';
+import { NotificationMatrix } from '@/components/NotificationMatrix';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Bell, Radio, Inbox, FileText, Layers, Database, Activity } from 'lucide-react';
+
+const quickLinks = [
+  { href: '/notifications', label: 'Send Notification', description: 'Trigger a single notification', icon: Bell },
+  { href: '/stream',        label: 'Live Stream',        description: 'Watch SSE events in real time',  icon: Radio },
+  { href: '/inbox',         label: 'Inbox',              description: 'In-app messages for this user',  icon: Inbox },
+  { href: '/templates',     label: 'Templates',          description: 'Manage reusable templates',      icon: FileText },
+  { href: '/batches',       label: 'Batches',            description: 'Send bulk notifications',        icon: Layers },
+];
 
 export default function Dashboard() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -11,99 +24,90 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchHealth = async () => {
-      setError(null);
-      try {
-        const result = await api.getHealth();
-        setHealth(result);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch health status';
-        setError(message);
-        console.error('Failed to fetch health:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHealth();
+    api.getHealth()
+      .then(setHealth)
+      .catch(e => setError(e instanceof Error ? e.message : 'Failed to reach service'))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-bold mb-2">Dashboard</h1>
-        <p className="text-[var(--text-secondary)]">Monitor your Buzz Notification Service in real-time</p>
+      {/* Page header */}
+      <div className="page-header">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Dashboard</h1>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">Overview of your Buzz Notification Service</p>
       </div>
 
-      {/* Health Status Card */}
-      <div className="card p-6">
-        <h2 className="text-lg font-bold mb-4 text-[var(--text-primary)]">Service Health</h2>
-        {error && (
-          <div className="mb-4 text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
-            {error}
-          </div>
-        )}
-        {loading ? (
-          <div className="animate-pulse h-20 bg-[var(--bg-secondary)] rounded" />
-        ) : health ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-secondary)]">Status:</span>
-              <span className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${health.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="font-semibold capitalize text-[var(--text-primary)]">{health.status}</span>
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-secondary)]">Version:</span>
-              <span className="font-semibold text-[var(--text-primary)]">{health.version}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-secondary)]">Database:</span>
-              <span className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${health.checks.database === 'up' ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="font-semibold capitalize text-[var(--text-primary)]">{health.checks.database}</span>
-              </span>
-            </div>
-          </div>
-        ) : null}
-      </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-      {/* Notification Matrix */}
+      {/* Service health */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity size={14} className="text-[var(--accent)]" />
+            Service Health
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-2.5">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-5 w-full bg-[var(--bg-tertiary)] rounded animate-pulse" />
+              ))}
+            </div>
+          ) : health ? (
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Status</div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${health.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="text-sm font-medium capitalize">{health.status}</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Version</div>
+                <div className="text-sm font-mono">{health.version}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Database</div>
+                <div className="flex items-center gap-2">
+                  <Database size={12} className={health.checks.database === 'up' ? 'text-green-500' : 'text-red-500'} />
+                  <Badge variant={health.checks.database === 'up' ? 'success' : 'destructive'}>
+                    {health.checks.database}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Notification matrix */}
       <NotificationMatrix />
 
-      {/* Quick Actions */}
-      <div className="card p-6">
-        <h2 className="text-lg font-bold mb-6 text-[var(--text-primary)]">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <a
-            href="/notifications"
-            className="p-6 border border-[var(--border-color)] rounded hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <div className="font-semibold text-[var(--text-primary)] mb-1">Send Notification</div>
-            <div className="text-sm text-[var(--text-secondary)]">Test a single notification</div>
-          </a>
-          <a
-            href="/stream"
-            className="p-6 border border-[var(--border-color)] rounded hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <div className="font-semibold text-[var(--text-primary)] mb-1">Live Stream</div>
-            <div className="text-sm text-[var(--text-secondary)]">Watch real-time events</div>
-          </a>
-          <a
-            href="/templates"
-            className="p-6 border border-[var(--border-color)] rounded hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <div className="font-semibold text-[var(--text-primary)] mb-1">Templates</div>
-            <div className="text-sm text-[var(--text-secondary)]">Create and manage templates</div>
-          </a>
-          <a
-            href="/batches"
-            className="p-6 border border-[var(--border-color)] rounded hover:border-[var(--accent)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <div className="font-semibold text-[var(--text-primary)] mb-1">Batch Jobs</div>
-            <div className="text-sm text-[var(--text-secondary)]">Send bulk notifications</div>
-          </a>
+      {/* Quick links */}
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-3">Quick Links</h2>
+        <div className="grid grid-cols-3 gap-3">
+          {quickLinks.map(({ href, label, description, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group flex items-start gap-3 p-4 rounded-[var(--radius)] border border-[var(--border-color)] bg-[var(--surface-1)] hover:border-[var(--accent)] hover:shadow-[var(--shadow-md)] transition-all"
+            >
+              <div className="mt-0.5 flex items-center justify-center w-7 h-7 rounded-[var(--radius)] bg-[var(--accent-subtle)] text-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-white transition-colors shrink-0">
+                <Icon size={14} />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-[var(--text-primary)]">{label}</div>
+                <div className="text-xs text-[var(--text-muted)] mt-0.5">{description}</div>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

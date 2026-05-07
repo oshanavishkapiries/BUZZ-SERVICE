@@ -4,147 +4,177 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { DeviceToken, Platform } from '@/lib/types';
 import { getUserId } from '@/lib/config';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Smartphone, Plus, Trash2, Monitor, AppleIcon } from 'lucide-react';
+
+const PLATFORM_ICON: Record<string, React.ReactNode> = {
+  android: <span className="text-[0.6rem] font-bold">AND</span>,
+  ios:     <AppleIcon size={10} />,
+  web:     <Monitor size={10} />,
+};
+
+const PLATFORM_VARIANT: Record<string, 'info' | 'secondary' | 'success'> = {
+  android: 'info',
+  ios:     'secondary',
+  web:     'success',
+};
 
 export default function DevicesPage() {
   const userId = getUserId();
   const [devices, setDevices] = useState<DeviceToken[]>([]);
   const [loading, setLoading] = useState(true);
-  const [registering, setRegistering] = useState(false);
-
-  // Form state
-  const [token, setToken] = useState('');
-  const [platform, setPlatform] = useState<Platform>('android');
-  const [error, setError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
 
-  const loadDevices = async () => {
+  const [token, setToken] = useState('');
+  const [platform, setPlatform] = useState<Platform>('android');
+  const [registering, setRegistering] = useState(false);
+  const [regError, setRegError] = useState<string | null>(null);
+  const [regSuccess, setRegSuccess] = useState(false);
+
+  const load = async () => {
     setLoading(true);
     setListError(null);
     try {
-      const result = await api.listDevices(userId);
-      setDevices(result.devices || []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load devices';
-      setListError(message);
+      const r = await api.listDevices(userId);
+      setDevices(r.devices || []);
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : 'Failed');
       setDevices([]);
-      console.error('Failed to load devices:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadDevices();
-  }, [userId]);
+  useEffect(() => { load(); }, [userId]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegistering(true);
-    setError(null);
-
+    setRegError(null);
+    setRegSuccess(false);
     try {
       await api.registerDevice({ user_id: userId, token, platform });
       setToken('');
-      await loadDevices();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to register device');
+      setRegSuccess(true);
+      await load();
+    } catch (e) {
+      setRegError(e instanceof Error ? e.message : 'Failed');
     } finally {
       setRegistering(false);
     }
   };
 
-  const handleUnregister = async (deviceToken: string) => {
-    if (confirm('Unregister this device?')) {
-      try {
-        await api.unregisterDevice(deviceToken);
-        await loadDevices();
-      } catch (err) {
-        console.error('Failed to unregister:', err);
-      }
-    }
+  const unregister = async (t: string) => {
+    if (!confirm('Remove this device?')) return;
+    try { await api.unregisterDevice(t); await load(); }
+    catch (e) { console.error(e); }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">Push Devices</h1>
-        <p className="text-[var(--text-secondary)]">Register devices for push notifications</p>
+      <div className="page-header">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Devices</h1>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">Push notification device tokens for <span className="font-mono">{userId}</span></p>
       </div>
 
-      {/* Register Form */}
-      <div className="card p-6 max-w-2xl">
-        <h2 className="text-lg font-bold mb-4 text-[var(--text-primary)]">Register Device</h2>
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label className="label-base">Device Token</label>
-            <input
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="FCM or APNs token"
-              className="input-base w-full mt-1 font-mono"
-              required
-            />
-          </div>
+      <div className="grid grid-cols-5 gap-6">
+        {/* Register form */}
+        <div className="col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus size={14} className="text-[var(--accent)]" />
+                Register Device
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div>
+                  <Label htmlFor="tok">Device Token</Label>
+                  <Input id="tok" value={token} onChange={e => setToken(e.target.value)}
+                    placeholder="FCM / APNs token" className="font-mono text-xs" required />
+                </div>
+                <div>
+                  <Label htmlFor="plat">Platform</Label>
+                  <Select id="plat" value={platform} onChange={e => setPlatform(e.target.value as Platform)}>
+                    <option value="android">Android (FCM)</option>
+                    <option value="ios">iOS (APNs)</option>
+                    <option value="web">Web Push</option>
+                  </Select>
+                </div>
+                {regError && <Alert variant="destructive"><AlertDescription>{regError}</AlertDescription></Alert>}
+                {regSuccess && <Alert variant="success"><AlertDescription>Device registered.</AlertDescription></Alert>}
+                <Button type="submit" disabled={registering} className="w-full">
+                  <Smartphone size={14} />
+                  {registering ? 'Registering…' : 'Register'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
 
-          <div>
-            <label className="label-base">Platform</label>
-            <select value={platform} onChange={(e) => setPlatform(e.target.value as Platform)} className="input-base w-full mt-1">
-              <option value="android">Android</option>
-              <option value="ios">iOS</option>
-              <option value="web">Web</option>
-            </select>
-          </div>
-
-          <button type="submit" disabled={registering} className="btn-primary w-full">
-            {registering ? 'Registering...' : 'Register Device'}
-          </button>
-
-          {error && <div className="text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">{error}</div>}
-        </form>
-      </div>
-
-      {/* Devices List */}
-      <div>
-        <h2 className="text-lg font-bold mb-4 text-[var(--text-primary)]">Registered Devices ({devices.length})</h2>
-        {listError && (
-          <div className="mb-4 text-red-600 dark:text-red-400 text-sm border border-red-300 bg-red-50 dark:bg-red-900/20 p-3 rounded">
-            {listError}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="card p-6 text-center">Loading...</div>
-        ) : devices.length === 0 ? (
-          <div className="card p-6 text-center text-[var(--text-secondary)]">No devices registered</div>
-        ) : (
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-                  <th className="text-left p-3 font-semibold">Token</th>
-                  <th className="text-left p-3 font-semibold">Platform</th>
-                  <th className="text-left p-3 font-semibold">Registered</th>
-                  <th className="text-right p-3 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {devices.map((d) => (
-                  <tr key={d.id} className="border-b border-[var(--border-color)]">
-                    <td className="p-3 font-mono text-xs text-[var(--text-secondary)]">{d.token.slice(0, 30)}...</td>
-                    <td className="p-3 capitalize">{d.platform}</td>
-                    <td className="p-3 text-xs">{new Date(d.created_at).toLocaleDateString()}</td>
-                    <td className="p-3 text-right">
-                      <button onClick={() => handleUnregister(d.token)} className="text-red-600 hover:font-semibold text-sm">
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* Device list */}
+        <div className="col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone size={14} className="text-[var(--accent)]" />
+                Registered Devices
+                {devices.length > 0 && <Badge variant="secondary">{devices.length}</Badge>}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {listError && (
+                <div className="p-4"><Alert variant="destructive"><AlertDescription>{listError}</AlertDescription></Alert></div>
+              )}
+              {loading ? (
+                <div className="p-8 text-center text-sm text-[var(--text-muted)]">Loading…</div>
+              ) : devices.length === 0 ? (
+                <div className="empty-state">
+                  <Smartphone size={28} className="mb-3 opacity-30" />
+                  <p className="text-sm">No devices registered</p>
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Platform</th>
+                      <th>Token</th>
+                      <th>Registered</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {devices.map(d => (
+                      <tr key={d.id}>
+                        <td>
+                          <Badge variant={PLATFORM_VARIANT[d.platform] ?? 'secondary'} className="flex items-center gap-1 w-fit">
+                            {PLATFORM_ICON[d.platform]}
+                            {d.platform}
+                          </Badge>
+                        </td>
+                        <td className="font-mono text-xs text-[var(--text-muted)]">{d.token.slice(0, 28)}…</td>
+                        <td className="text-xs text-[var(--text-muted)]">{new Date(d.created_at).toLocaleDateString()}</td>
+                        <td>
+                          <Button variant="ghost" size="icon" onClick={() => unregister(d.token)}
+                            className="h-7 w-7 text-[var(--destructive)] hover:bg-red-50 dark:hover:bg-red-900/20">
+                            <Trash2 size={13} />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
