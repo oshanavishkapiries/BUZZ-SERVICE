@@ -65,6 +65,9 @@
 | 2026-05-20 | SMTP Email Content-Type Fix | `internal/provider/email/smtp.go` | Moved Content-Type and boundary configuration before building headers list to prevent raw multipart MIME layout display in email clients. |
 | 2026-05-20 | HTML Email Auto-Detection | `internal/provider/email/types.go` | Added auto-detection for HTML content to prevent the template rendering engine from escaping HTML tags (like '<' to '&lt;') if the body is already HTML. |
 | 2026-05-20 | Dashboard Charts & UI cleanups | `client/src/app/page.tsx`, `client/src/components/DashboardCharts.tsx` | Removed the bottom Quick Links section from the dashboard, added a new Recharts-powered DashboardCharts component with a Delivery Status Donut Chart and Channel Stacked Bar Chart. |
+| 2026-05-20 | SSE Real-time Auth Fix | `internal/api/middleware.go`, `client/src/hooks/useSSE.ts` | Added path prefix matching for `/api/v1/stream` in isGlobalRoute to bypass session application-ID requirements for JWT, allowed user_id overrides from query parameters, and fell back to JWT in frontend hook. |
+| 2026-05-20 | SSE EventSource CORS Fix | `client/src/hooks/useSSE.ts` | Removed `withCredentials: true` option from `EventSource` initialization to allow wildcard origin sharing config of backend and stop infinite reconnection loops. |
+| 2026-05-20 | Settings User ID Auto-Sync | `client/src/app/settings/page.tsx` | Added auto-sync to set the User ID field to the logged-in user profile's UUID on load, and added a "Reset to my User ID" button if the developer modifies it. |
 
 ---
 
