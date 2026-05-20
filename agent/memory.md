@@ -68,6 +68,7 @@
 | 2026-05-20 | SSE Real-time Auth Fix | `internal/api/middleware.go`, `client/src/hooks/useSSE.ts` | Added path prefix matching for `/api/v1/stream` in isGlobalRoute to bypass session application-ID requirements for JWT, allowed user_id overrides from query parameters, and fell back to JWT in frontend hook. |
 | 2026-05-20 | SSE EventSource CORS Fix | `client/src/hooks/useSSE.ts` | Removed `withCredentials: true` option from `EventSource` initialization to allow wildcard origin sharing config of backend and stop infinite reconnection loops. |
 | 2026-05-20 | Settings User ID Auto-Sync | `client/src/app/settings/page.tsx` | Added auto-sync to set the User ID field to the logged-in user profile's UUID on load, and added a "Reset to my User ID" button if the developer modifies it. |
+| 2026-05-20 | InApp Provider FK Fix | `internal/provider/inapp/provider.go` | Fixed missing `ApplicationID` assignment when building the `InboxEntry` — it was left as `uuid.Nil` causing a FK constraint violation on `inbox.application_id_fkey`. Now propagates `n.ApplicationID` from the notification. |
 
 ---
 
