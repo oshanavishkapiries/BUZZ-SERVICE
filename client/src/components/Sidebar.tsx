@@ -104,6 +104,13 @@ export function Sidebar() {
 			? pathname === '/'
 			: pathname === href || pathname.startsWith(href + '/');
 
+	const dynamicNavItems = [...navItems];
+	const dynamicBottomItems = [...bottomItems];
+
+	if (user && user.role === 'owner') {
+		dynamicBottomItems.splice(1, 0, { href: '/users', label: 'Users', icon: User });
+	}
+
 	const handleSwitchApp = (app: Types.Application) => {
 		localStorage.setItem('buzz_active_app_id', app.id);
 		setActiveApp(app);
@@ -211,7 +218,7 @@ export function Sidebar() {
 				{/* Primary nav */}
 				<nav className="flex-1 overflow-y-auto py-3 px-2">
 					<div className="space-y-0.5">
-						{navItems.map(({ href, label, icon: Icon }) => {
+						{dynamicNavItems.map(({ href, label, icon: Icon }) => {
 							const active = isActive(href);
 							return (
 								<Link
@@ -256,7 +263,7 @@ export function Sidebar() {
 					)}
 
 					<div className="space-y-0.5">
-						{bottomItems.map(({ href, label, icon: Icon }) => {
+						{dynamicBottomItems.map(({ href, label, icon: Icon }) => {
 							const active = isActive(href);
 							return (
 								<Link

@@ -41,7 +41,7 @@ export default function LoginPage() {
 
 	return (
 		<div className="flex min-h-screen items-center justify-center p-4 bg-[var(--bg-primary)]">
-			<div className="w-full max-w-md p-8 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-xl relative overflow-hidden">
+			<div className="w-full max-w-md p-8 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-xl relative overflow-hidden">
 				{/* Decorative background glow */}
 				<div className="absolute -top-40 -right-40 w-80 h-80 bg-[var(--accent)] opacity-10 rounded-full blur-3xl pointer-events-none"></div>
 				
@@ -100,10 +100,7 @@ export default function LoginPage() {
 				</form>
 
 				<div className="mt-6 text-center text-sm text-[var(--text-muted)] relative z-10">
-					Don't have an account?{' '}
-					<Link href="/signup" className="text-[var(--accent)] hover:underline font-medium">
-						Sign up
-					</Link>
+					Need an account? Please contact your system administrator to get added.
 				</div>
 			</div>
 		</div>

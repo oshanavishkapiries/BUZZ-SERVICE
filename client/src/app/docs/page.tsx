@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   BookOpen, Bell, Database, Layers, Key, Wifi,
-  FileText, ChevronRight, Terminal, AlertCircle,
+  FileText, ChevronRight, Terminal, AlertCircle, Users,
 } from 'lucide-react';
 
 type Section =
   | 'overview'
   | 'auth'
+  | 'users'
   | 'templates'
   | 'send'
   | 'datasources'
@@ -21,6 +22,7 @@ type Section =
 const sections: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'overview',    label: 'Overview',            icon: BookOpen  },
   { id: 'auth',        label: 'Authentication',      icon: Key       },
+  { id: 'users',       label: 'Users & Workspaces',   icon: Users     },
   { id: 'templates',   label: 'Templates',           icon: FileText  },
   { id: 'send',        label: 'Sending Notifications', icon: Bell    },
   { id: 'datasources', label: 'Registering Datasources', icon: Database },
@@ -615,9 +617,81 @@ function Errors() {
   );
 }
 
+function UsersSection() {
+  return (
+    <div>
+      <P>
+        Buzz features built-in multi-tenant isolation through <strong>Application Workspaces</strong> and
+        role-based access control (RBAC). Self-registration is disabled for production environments. Users are created
+        and managed by system owners.
+      </P>
+
+      <H2>System Roles</H2>
+      <P>
+        Users are assigned one of two system-wide administrative roles:
+      </P>
+      <div className="mt-2 border border-[var(--border-color)] rounded-[var(--radius)] overflow-hidden">
+        {[
+          ['owner', 'Root administrators. System owners have access to all applications automatically, can manage system-wide user accounts under the Users panel, and register new workspaces.'],
+          ['user', 'Standard user accounts. Standard users have no access to any application workspaces by default. They must be explicitly granted access to specific applications by an application admin or system owner.'],
+        ].map(([role, desc]) => (
+          <div key={role} className="flex items-start gap-3 px-4 py-2 border-b border-[var(--border-color)] last:border-0">
+            <code className="font-mono text-xs text-[var(--accent)] w-28 shrink-0">{role}</code>
+            <span className="text-xs text-[var(--text-secondary)]">{desc}</span>
+          </div>
+        ))}
+      </div>
+
+      <H2>Workspace Membership & Roles</H2>
+      <P>
+        When standard users are granted access to a specific application workspace, they are assigned one of the following roles:
+      </P>
+      <div className="mt-2 border border-[var(--border-color)] rounded-[var(--radius)] overflow-hidden">
+        {[
+          ['admin', 'Full control over the specific application workspace, including the ability to manage API keys, configure delivery providers, and manage other workspace members.'],
+          ['member', 'Read and send permissions. Members can send individual and batch notifications, view history, and use SSE streams, but cannot modify settings or credentials.'],
+        ].map(([role, desc]) => (
+          <div key={role} className="flex items-start gap-3 px-4 py-2 border-b border-[var(--border-color)] last:border-0">
+            <code className="font-mono text-xs text-[var(--accent)] w-28 shrink-0">{role}</code>
+            <span className="text-xs text-[var(--text-secondary)]">{desc}</span>
+          </div>
+        ))}
+      </div>
+
+      <H2>User & Workspace Endpoints (Owner / Admin Scoped)</H2>
+      <H3>System User Management</H3>
+      <Endpoint method="GET" path="/api/v1/users" desc="List all system-wide users (Owner only)" />
+      <Endpoint method="POST" path="/api/v1/users" desc="Create a new user account (Owner only)" />
+      <Endpoint method="DELETE" path="/api/v1/users/:id" desc="Permanently delete a user account (Owner only)" />
+      <Code>{`
+// Request to POST /api/v1/users
+{
+  "name": "Jane Doe",
+  "email": "jane@company.com",
+  "password": "securepassword123",
+  "role": "user" // "owner" | "user"
+}
+`}</Code>
+
+      <H3>Application Workspace Permissions</H3>
+      <Endpoint method="GET" path="/api/v1/applications/:appId/members" desc="List workspace members" />
+      <Endpoint method="POST" path="/api/v1/applications/:appId/members" desc="Grant a user access to workspace" />
+      <Endpoint method="DELETE" path="/api/v1/applications/:appId/members/:userId" desc="Revoke user access from workspace" />
+      <Code>{`
+// Request to POST /api/v1/applications/:appId/members
+{
+  "email": "jane@company.com",
+  "role": "member" // "admin" | "member"
+}
+`}</Code>
+    </div>
+  );
+}
+
 const CONTENT: Record<Section, React.ReactNode> = {
   overview:    <Overview />,
   auth:        <Auth />,
+  users:       <UsersSection />,
   templates:   <Templates />,
   send:        <Send />,
   datasources: <Datasources />,

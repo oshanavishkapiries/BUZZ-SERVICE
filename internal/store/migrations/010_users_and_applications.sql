@@ -44,12 +44,12 @@ CREATE TRIGGER update_applications_updated_at BEFORE UPDATE ON applications
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Seed a default user and a default application
--- The password is 'admin123' hashed with bcrypt ($2a$10$WixS41mX28Fq0n0U2U41DuS9iPpxPzK8e4b7/3kLwzIe1j2.U7O8m)
+-- The password is 'admin123' hashed with bcrypt ($2a$10$0YbxAXlt2itiS4Oajq6s6.HTlS8DJEV.ULdF1cshAlGJRJVeOoCnO)
 INSERT INTO users (id, email, password_hash, name)
 VALUES (
     '11111111-1111-1111-1111-111111111111',
     'admin@buzz.local',
-    '$2a$10$WixS41mX28Fq0n0U2U41DuS9iPpxPzK8e4b7/3kLwzIe1j2.U7O8m',
+    '$2a$10$0YbxAXlt2itiS4Oajq6s6.HTlS8DJEV.ULdF1cshAlGJRJVeOoCnO',
     'Admin User'
 ) ON CONFLICT (email) DO NOTHING;
 
