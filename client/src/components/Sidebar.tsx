@@ -166,7 +166,7 @@ export function Sidebar() {
 				</div>
 
 				{/* Application Switcher Dropdown */}
-				{activeApp && (
+				{activeApp ? (
 					<div className="px-3 py-3 border-b border-[var(--border-color)] relative" ref={dropdownRef}>
 						<button
 							onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -212,6 +212,16 @@ export function Sidebar() {
 								</div>
 							</div>
 						)}
+					</div>
+				) : (
+					<div className="px-3 py-3 border-b border-[var(--border-color)]">
+						<button
+							onClick={() => setIsModalOpen(true)}
+							className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-[var(--radius)] border border-dashed border-[var(--border-color)] bg-[var(--bg-primary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--accent)] text-[var(--accent)] transition-all text-xs font-semibold"
+						>
+							<Plus size={14} className="shrink-0" />
+							Create Workspace
+						</button>
 					</div>
 				)}
 

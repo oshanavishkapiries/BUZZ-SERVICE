@@ -24,8 +24,12 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [hasActiveApp, setHasActiveApp] = useState<boolean>(true);
 
   useEffect(() => {
+    const activeAppId = localStorage.getItem('buzz_active_app_id');
+    setHasActiveApp(!!activeAppId);
+
     api.getHealth()
       .then(setHealth)
       .catch(e => setError(e instanceof Error ? e.message : 'Failed to reach service'))
@@ -65,6 +69,14 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {!hasActiveApp && (
+        <Alert className="bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[var(--accent)]">
+          <AlertDescription className="font-semibold text-xs flex items-center justify-between">
+            <span>You do not have an active application workspace. Please click "Create Workspace" in the sidebar to create one, or verify that your account has been granted permissions to an existing workspace.</span>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">

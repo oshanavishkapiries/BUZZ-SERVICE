@@ -176,7 +176,14 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.store.DeleteUser(c.Context(), userID); err != nil {
+	callerID, err := uuid.Parse(callerIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to parse caller ID",
+		})
+	}
+
+	if err := h.store.DeleteUser(c.Context(), userID, callerID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to delete user",
 		})
