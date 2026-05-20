@@ -302,3 +302,19 @@ func (s *PostgresStore) ListApplicationMembers(ctx context.Context, appID uuid.U
 	}
 	return members, rows.Err()
 }
+
+// UpdateApplication updates an application's name and description
+func (s *PostgresStore) UpdateApplication(ctx context.Context, id uuid.UUID, name string, description *string) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE applications SET name = $1, description = $2, updated_at = NOW()
+		WHERE id = $3`,
+		name, description, id,
+	)
+	return err
+}
+
+// DeleteApplication permanently deletes an application and all its data via CASCADE
+func (s *PostgresStore) DeleteApplication(ctx context.Context, id uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM applications WHERE id = $1`, id)
+	return err
+}
