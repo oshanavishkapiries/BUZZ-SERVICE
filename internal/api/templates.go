@@ -34,6 +34,11 @@ func NewTemplateHandler(store *store.PostgresStore) *TemplateHandler {
 // @Security     Bearer
 // @Router       /api/v1/templates [post]
 func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	var req CreateTemplateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
@@ -65,14 +70,15 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 	}
 
 	template := &domain.Template{
-		ID:        uuid.New(),
-		Name:      req.Name,
-		Channels:  channels,
-		Subject:   subjectPtr,
-		Body:      req.Body,
-		Variables: variables,
-		IsActive:  true,
-		Config:    req.Metadata,
+		ID:            uuid.New(),
+		ApplicationID: appID,
+		Name:          req.Name,
+		Channels:      channels,
+		Subject:       subjectPtr,
+		Body:          req.Body,
+		Variables:     variables,
+		IsActive:      true,
+		Config:        req.Metadata,
 	}
 
 	repo := store.NewTemplateRepository(h.store.DB())
@@ -97,10 +103,15 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/templates/{name} [get]
 func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	name, _ := url.PathUnescape(c.Params("name"))
 
 	repo := store.NewTemplateRepository(h.store.DB())
-	template, err := repo.GetByName(c.Context(), name)
+	template, err := repo.GetByName(c.Context(), appID, name)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "template not found",
@@ -124,6 +135,11 @@ func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/templates [get]
 func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	// Parse query parameters
 	channel := c.Query("channel")
 	activeOnly := c.QueryBool("active", true)
@@ -139,7 +155,7 @@ func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
 	}
 
 	repo := store.NewTemplateRepository(h.store.DB())
-	templates, err := repo.List(c.Context(), filters, limit, offset)
+	templates, err := repo.List(c.Context(), appID, filters, limit, offset)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error":   "failed to fetch templates",
@@ -148,7 +164,7 @@ func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
 	}
 
 	// Get total count
-	total, err := repo.Count(c.Context(), filters)
+	total, err := repo.Count(c.Context(), appID, filters)
 	if err != nil {
 		total = len(templates) // fallback to returned count if count fails
 	}
@@ -176,6 +192,11 @@ func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/templates/{name} [patch]
 func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	name, _ := url.PathUnescape(c.Params("name"))
 
 	var req UpdateTemplateRequest
@@ -188,7 +209,7 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 
 	// Get existing template
 	repo := store.NewTemplateRepository(h.store.DB())
-	template, err := repo.GetByName(c.Context(), name)
+	template, err := repo.GetByName(c.Context(), appID, name)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "template not found",
@@ -241,11 +262,16 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/templates/{name} [delete]
 func (h *TemplateHandler) DeleteTemplate(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	name, _ := url.PathUnescape(c.Params("name"))
 
 	repo := store.NewTemplateRepository(h.store.DB())
 	// First get the template to get its ID
-	template, err := repo.GetByName(c.Context(), name)
+	template, err := repo.GetByName(c.Context(), appID, name)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "template not found",
@@ -253,7 +279,7 @@ func (h *TemplateHandler) DeleteTemplate(c *fiber.Ctx) error {
 	}
 
 	// Delete by ID
-	if err := repo.Delete(c.Context(), template.ID); err != nil {
+	if err := repo.Delete(c.Context(), appID, template.ID); err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "failed to delete template",
 		})

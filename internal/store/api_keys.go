@@ -24,18 +24,18 @@ func NewAPIKeyRepository(db *sql.DB) *APIKeyRepository {
 func (r *APIKeyRepository) Create(ctx context.Context, apiKey *domain.APIKey) error {
 	query := `
 		INSERT INTO api_keys (
-			id, name, description, key_hash, key_prefix, environment, scopes,
+			id, application_id, name, description, key_hash, key_prefix, environment, scopes,
 			rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
 			allowed_ips, is_active, expires_at, metadata, created_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
 		) RETURNING created_at, updated_at
 	`
 
 	apiKey.ID = uuid.New()
 
 	err := r.db.QueryRowContext(ctx, query,
-		apiKey.ID, apiKey.Name, apiKey.Description, apiKey.KeyHash, apiKey.KeyPrefix,
+		apiKey.ID, apiKey.ApplicationID, apiKey.Name, apiKey.Description, apiKey.KeyHash, apiKey.KeyPrefix,
 		apiKey.Environment, pq.Array(apiKey.Scopes), apiKey.RateLimitPerMinute,
 		apiKey.RateLimitPerHour, apiKey.RateLimitPerDay, pq.Array(apiKey.AllowedIPs),
 		apiKey.IsActive, apiKey.ExpiresAt, apiKey.Metadata, apiKey.CreatedBy,
@@ -48,20 +48,20 @@ func (r *APIKeyRepository) Create(ctx context.Context, apiKey *domain.APIKey) er
 	return nil
 }
 
-// GetByID retrieves an API key by ID
-func (r *APIKeyRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.APIKey, error) {
+// GetByID retrieves an API key by ID, scoped to an application
+func (r *APIKeyRepository) GetByID(ctx context.Context, appID uuid.UUID, id uuid.UUID) (*domain.APIKey, error) {
 	query := `
-		SELECT id, name, description, key_hash, key_prefix, environment, scopes,
+		SELECT id, application_id, name, description, key_hash, key_prefix, environment, scopes,
 			rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
 			last_used_at, usage_count, allowed_ips, is_active, expires_at,
 			metadata, created_at, updated_at, created_by, deleted_at
 		FROM api_keys
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE id = $1 AND application_id = $2 AND deleted_at IS NULL
 	`
 
 	apiKey := &domain.APIKey{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&apiKey.ID, &apiKey.Name, &apiKey.Description, &apiKey.KeyHash, &apiKey.KeyPrefix,
+	err := r.db.QueryRowContext(ctx, query, id, appID).Scan(
+		&apiKey.ID, &apiKey.ApplicationID, &apiKey.Name, &apiKey.Description, &apiKey.KeyHash, &apiKey.KeyPrefix,
 		&apiKey.Environment, pq.Array(&apiKey.Scopes), &apiKey.RateLimitPerMinute,
 		&apiKey.RateLimitPerHour, &apiKey.RateLimitPerDay, &apiKey.LastUsedAt,
 		&apiKey.UsageCount, pq.Array(&apiKey.AllowedIPs), &apiKey.IsActive,
@@ -79,10 +79,10 @@ func (r *APIKeyRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.A
 	return apiKey, nil
 }
 
-// GetByKeyHash retrieves an API key by its hash
+// GetByKeyHash retrieves an API key by its hash (used globally by middleware to identify the app)
 func (r *APIKeyRepository) GetByKeyHash(ctx context.Context, keyHash string) (*domain.APIKey, error) {
 	query := `
-		SELECT id, name, description, key_hash, key_prefix, environment, scopes,
+		SELECT id, application_id, name, description, key_hash, key_prefix, environment, scopes,
 			rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
 			last_used_at, usage_count, allowed_ips, is_active, expires_at,
 			metadata, created_at, updated_at, created_by, deleted_at
@@ -92,7 +92,7 @@ func (r *APIKeyRepository) GetByKeyHash(ctx context.Context, keyHash string) (*d
 
 	apiKey := &domain.APIKey{}
 	err := r.db.QueryRowContext(ctx, query, keyHash).Scan(
-		&apiKey.ID, &apiKey.Name, &apiKey.Description, &apiKey.KeyHash, &apiKey.KeyPrefix,
+		&apiKey.ID, &apiKey.ApplicationID, &apiKey.Name, &apiKey.Description, &apiKey.KeyHash, &apiKey.KeyPrefix,
 		&apiKey.Environment, pq.Array(&apiKey.Scopes), &apiKey.RateLimitPerMinute,
 		&apiKey.RateLimitPerHour, &apiKey.RateLimitPerDay, &apiKey.LastUsedAt,
 		&apiKey.UsageCount, pq.Array(&apiKey.AllowedIPs), &apiKey.IsActive,
@@ -110,21 +110,21 @@ func (r *APIKeyRepository) GetByKeyHash(ctx context.Context, keyHash string) (*d
 	return apiKey, nil
 }
 
-// Update updates an existing API key
-func (r *APIKeyRepository) Update(ctx context.Context, apiKey *domain.APIKey) error {
+// Update updates an existing API key, scoped to an application
+func (r *APIKeyRepository) Update(ctx context.Context, appID uuid.UUID, apiKey *domain.APIKey) error {
 	query := `
 		UPDATE api_keys SET
 			name = $1, description = $2, scopes = $3, rate_limit_per_minute = $4,
 			rate_limit_per_hour = $5, rate_limit_per_day = $6, allowed_ips = $7,
 			is_active = $8, expires_at = $9, metadata = $10, updated_at = NOW()
-		WHERE id = $11 AND deleted_at IS NULL
+		WHERE id = $11 AND application_id = $12 AND deleted_at IS NULL
 		RETURNING updated_at
 	`
 
 	err := r.db.QueryRowContext(ctx, query,
 		apiKey.Name, apiKey.Description, pq.Array(apiKey.Scopes), apiKey.RateLimitPerMinute,
 		apiKey.RateLimitPerHour, apiKey.RateLimitPerDay, pq.Array(apiKey.AllowedIPs),
-		apiKey.IsActive, apiKey.ExpiresAt, apiKey.Metadata, apiKey.ID,
+		apiKey.IsActive, apiKey.ExpiresAt, apiKey.Metadata, apiKey.ID, appID,
 	).Scan(&apiKey.UpdatedAt)
 
 	if err == sql.ErrNoRows {
@@ -137,7 +137,7 @@ func (r *APIKeyRepository) Update(ctx context.Context, apiKey *domain.APIKey) er
 	return nil
 }
 
-// UpdateUsage updates the usage statistics for an API key
+// UpdateUsage updates the usage statistics for an API key (used globally by middleware)
 func (r *APIKeyRepository) UpdateUsage(ctx context.Context, id uuid.UUID) error {
 	query := `
 		UPDATE api_keys SET
@@ -161,19 +161,19 @@ func (r *APIKeyRepository) UpdateUsage(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
-// List retrieves API keys with optional filters
-func (r *APIKeyRepository) List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*domain.APIKey, error) {
+// List retrieves API keys for a specific application with optional filters
+func (r *APIKeyRepository) List(ctx context.Context, appID uuid.UUID, filters map[string]interface{}, limit, offset int) ([]*domain.APIKey, error) {
 	query := `
-		SELECT id, name, description, key_hash, key_prefix, environment, scopes,
+		SELECT id, application_id, name, description, key_hash, key_prefix, environment, scopes,
 			rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day,
 			last_used_at, usage_count, allowed_ips, is_active, expires_at,
 			metadata, created_at, updated_at, created_by, deleted_at
 		FROM api_keys
-		WHERE deleted_at IS NULL
+		WHERE application_id = $1 AND deleted_at IS NULL
 	`
 
-	args := []interface{}{}
-	argIndex := 1
+	args := []interface{}{appID}
+	argIndex := 2
 
 	// Add filters
 	if isActive, ok := filters["is_active"].(bool); ok {
@@ -209,7 +209,7 @@ func (r *APIKeyRepository) List(ctx context.Context, filters map[string]interfac
 	for rows.Next() {
 		apiKey := &domain.APIKey{}
 		err := rows.Scan(
-			&apiKey.ID, &apiKey.Name, &apiKey.Description, &apiKey.KeyHash, &apiKey.KeyPrefix,
+			&apiKey.ID, &apiKey.ApplicationID, &apiKey.Name, &apiKey.Description, &apiKey.KeyHash, &apiKey.KeyPrefix,
 			&apiKey.Environment, pq.Array(&apiKey.Scopes), &apiKey.RateLimitPerMinute,
 			&apiKey.RateLimitPerHour, &apiKey.RateLimitPerDay, &apiKey.LastUsedAt,
 			&apiKey.UsageCount, pq.Array(&apiKey.AllowedIPs), &apiKey.IsActive,
@@ -229,15 +229,15 @@ func (r *APIKeyRepository) List(ctx context.Context, filters map[string]interfac
 	return apiKeys, nil
 }
 
-// Delete soft deletes an API key
-func (r *APIKeyRepository) Delete(ctx context.Context, id uuid.UUID) error {
+// Delete soft deletes an API key scoped to an application
+func (r *APIKeyRepository) Delete(ctx context.Context, appID uuid.UUID, id uuid.UUID) error {
 	query := `
 		UPDATE api_keys SET
 			deleted_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE id = $1 AND application_id = $2 AND deleted_at IS NULL
 	`
 
-	result, err := r.db.ExecContext(ctx, query, id)
+	result, err := r.db.ExecContext(ctx, query, id, appID)
 	if err != nil {
 		return fmt.Errorf("failed to delete API key: %w", err)
 	}

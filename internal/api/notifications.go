@@ -43,6 +43,11 @@ func NewNotificationHandler(store *store.PostgresStore, producer *queue.Producer
 // @Security     Bearer
 // @Router       /api/v1/notifications [post]
 func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	var req SendNotificationRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
@@ -61,24 +66,12 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 
 	ctx := c.Context()
 
-	// TODO: Check idempotency (will be implemented with notification-filters)
-	// if req.IdempotencyKey != "" {
-	// 	existing, err := h.store.GetNotificationByIdempotencyKey(ctx, req.IdempotencyKey)
-	// 	if err == nil {
-	// 		return c.Status(200).JSON(fiber.Map{
-	// 			"id":      existing.ID,
-	// 			"status":  existing.Status,
-	// 			"message": "notification already exists (idempotency)",
-	// 		})
-	// 	}
-	// }
-
 	// Process template if provided
 	var body, subject string
 	var templateData map[string]interface{}
 
 	if req.Template != "" {
-		template, err := h.store.GetTemplateByName(ctx, req.Template)
+		template, err := h.store.GetTemplateByName(ctx, appID, req.Template)
 		if err != nil {
 			return c.Status(404).JSON(fiber.Map{
 				"error":    "template not found",
@@ -145,20 +138,21 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 	}
 
 	notification := &domain.Notification{
-		ID:         uuid.New(),
-		Channel:    req.Channel,
-		Priority:   req.Priority,
-		Provider:   providerPtr,
-		Recipient:  recipient,
-		Subject:    subjectPtr,
-		Body:       body,
-		Variables:  templateData,
-		Status:     domain.StatusQueued,
-		RetryCount: 0,
-		MaxRetries: 3,
-		QueuedAt:   &now,
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		ID:            uuid.New(),
+		ApplicationID: appID,
+		Channel:       req.Channel,
+		Priority:      req.Priority,
+		Provider:      providerPtr,
+		Recipient:     recipient,
+		Subject:       subjectPtr,
+		Body:          body,
+		Variables:     templateData,
+		Status:        domain.StatusQueued,
+		RetryCount:    0,
+		MaxRetries:    3,
+		QueuedAt:      &now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
 	// Save to database
@@ -208,6 +202,11 @@ func (h *NotificationHandler) SendNotification(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/notifications/{id} [get]
 func (h *NotificationHandler) GetNotification(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -217,7 +216,7 @@ func (h *NotificationHandler) GetNotification(c *fiber.Ctx) error {
 	}
 
 	repo := store.NewNotificationRepository(h.store.DB())
-	notification, err := repo.GetByID(c.Context(), id)
+	notification, err := repo.GetByID(c.Context(), appID, id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "notification not found",
@@ -243,6 +242,11 @@ func (h *NotificationHandler) GetNotification(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/notifications [get]
 func (h *NotificationHandler) ListNotifications(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	// Parse query parameters
 	status := c.Query("status")
 	channel := c.Query("channel")
@@ -271,7 +275,7 @@ func (h *NotificationHandler) ListNotifications(c *fiber.Ctx) error {
 	}
 
 	repo := store.NewNotificationRepository(h.store.DB())
-	notifications, err := repo.List(c.Context(), filters, limit, offset)
+	notifications, err := repo.List(c.Context(), appID, filters, limit, offset)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error":   "failed to fetch notifications",
@@ -297,8 +301,13 @@ func (h *NotificationHandler) ListNotifications(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/notifications/matrix [get]
 func (h *NotificationHandler) GetMatrix(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	repo := store.NewNotificationRepository(h.store.DB())
-	counts, err := repo.GetMatrix(c.Context())
+	counts, err := repo.GetMatrix(c.Context(), appID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error":   "failed to fetch notification matrix",

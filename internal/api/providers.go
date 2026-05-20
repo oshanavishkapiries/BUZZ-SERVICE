@@ -34,6 +34,11 @@ func NewProviderHandler(store *store.PostgresStore, registry *provider.Registry)
 // @Security     Bearer
 // @Router       /api/v1/providers [post]
 func (h *ProviderHandler) CreateProvider(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	var req CreateProviderRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body", "details": err.Error()})
@@ -44,15 +49,16 @@ func (h *ProviderHandler) CreateProvider(c *fiber.Ctx) error {
 
 	now := time.Now()
 	pc := &domain.ProviderConfig{
-		ID:        uuid.New(),
-		Name:      req.Name,
-		Channel:   req.Channel,
-		Provider:  req.Provider,
-		Config:    domain.JSONB(req.Config),
-		IsDefault: req.IsDefault,
-		IsActive:  true,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:            uuid.New(),
+		ApplicationID: appID,
+		Name:          req.Name,
+		Channel:       req.Channel,
+		Provider:      req.Provider,
+		Config:        domain.JSONB(req.Config),
+		IsDefault:     req.IsDefault,
+		IsActive:      true,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
 	if err := h.store.CreateProviderConfig(c.Context(), pc); err != nil {
@@ -80,7 +86,12 @@ func (h *ProviderHandler) CreateProvider(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/providers [get]
 func (h *ProviderHandler) ListProviders(c *fiber.Ctx) error {
-	configs, err := h.store.ListProviderConfigs(c.Context())
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
+	configs, err := h.store.ListProviderConfigs(c.Context(), appID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to list provider configs", "details": err.Error()})
 	}
@@ -102,11 +113,16 @@ func (h *ProviderHandler) ListProviders(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/providers/{id} [get]
 func (h *ProviderHandler) GetProvider(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid id format"})
 	}
-	pc, err := h.store.GetProviderConfigByID(c.Context(), id)
+	pc, err := h.store.GetProviderConfigByID(c.Context(), appID, id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "provider config not found"})
 	}
@@ -127,11 +143,16 @@ func (h *ProviderHandler) GetProvider(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/providers/{id} [patch]
 func (h *ProviderHandler) UpdateProvider(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid id format"})
 	}
-	pc, err := h.store.GetProviderConfigByID(c.Context(), id)
+	pc, err := h.store.GetProviderConfigByID(c.Context(), appID, id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "provider config not found"})
 	}
@@ -154,7 +175,7 @@ func (h *ProviderHandler) UpdateProvider(c *fiber.Ctx) error {
 		pc.IsActive = *req.IsActive
 	}
 
-	if err := h.store.UpdateProviderConfig(c.Context(), pc); err != nil {
+	if err := h.store.UpdateProviderConfig(c.Context(), appID, pc); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to update provider config", "details": err.Error()})
 	}
 
@@ -176,14 +197,19 @@ func (h *ProviderHandler) UpdateProvider(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/providers/{id} [delete]
 func (h *ProviderHandler) DeleteProvider(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid id format"})
 	}
-	if _, err := h.store.GetProviderConfigByID(c.Context(), id); err != nil {
+	if _, err := h.store.GetProviderConfigByID(c.Context(), appID, id); err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "provider config not found"})
 	}
-	if err := h.store.DeleteProviderConfig(c.Context(), id); err != nil {
+	if err := h.store.DeleteProviderConfig(c.Context(), appID, id); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to delete provider config", "details": err.Error()})
 	}
 

@@ -37,46 +37,46 @@ func NewProcessor(
 }
 
 // ProcessBatch fetches recipients from datasource and sends notifications
-func (p *Processor) ProcessBatch(ctx context.Context, batchID uuid.UUID) error {
+func (p *Processor) ProcessBatch(ctx context.Context, appID uuid.UUID, batchID uuid.UUID) error {
 	// Fetch batch
-	batch, err := p.store.GetBatch(ctx, batchID)
+	batch, err := p.store.GetBatch(ctx, appID, batchID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch batch: %w", err)
 	}
 
 	// Update status to FETCHING
-	if err := p.store.UpdateBatchStatus(ctx, batchID, domain.BatchStatusFetching); err != nil {
+	if err := p.store.UpdateBatchStatus(ctx, appID, batchID, domain.BatchStatusFetching); err != nil {
 		return fmt.Errorf("failed to update batch status to FETCHING: %w", err)
 	}
 
 	// Fetch datasource
 	if batch.DatasourceID == nil {
-		return p.failBatch(ctx, batchID, "batch has no datasource configured")
+		return p.failBatch(ctx, appID, batchID, "batch has no datasource configured")
 	}
-	ds, err := p.store.GetDatasourceByID(ctx, *batch.DatasourceID)
+	ds, err := p.store.GetDatasourceByID(ctx, appID, *batch.DatasourceID)
 	if err != nil {
-		return p.failBatch(ctx, batchID, fmt.Sprintf("failed to fetch datasource: %v", err))
+		return p.failBatch(ctx, appID, batchID, fmt.Sprintf("failed to fetch datasource: %v", err))
 	}
 
 	// Fetch recipients from datasource
 	recipients, err := p.dsClient.FetchRecipientsWithPagination(ctx, ds, batch.EndpointName, batch.EndpointParams)
 	if err != nil {
-		return p.failBatch(ctx, batchID, fmt.Sprintf("failed to fetch recipients: %v", err))
+		return p.failBatch(ctx, appID, batchID, fmt.Sprintf("failed to fetch recipients: %v", err))
 	}
 
 	// Update total count
-	if err := p.store.UpdateBatchTotal(ctx, batchID, len(recipients)); err != nil {
-		return p.failBatch(ctx, batchID, fmt.Sprintf("failed to update batch total: %v", err))
+	if err := p.store.UpdateBatchTotal(ctx, appID, batchID, len(recipients)); err != nil {
+		return p.failBatch(ctx, appID, batchID, fmt.Sprintf("failed to update batch total: %v", err))
 	}
 
 	// Update status to QUEUED
-	if err := p.store.UpdateBatchStatus(ctx, batchID, domain.BatchStatusQueued); err != nil {
-		return p.failBatch(ctx, batchID, fmt.Sprintf("failed to update batch status to QUEUED: %v", err))
+	if err := p.store.UpdateBatchStatus(ctx, appID, batchID, domain.BatchStatusQueued); err != nil {
+		return p.failBatch(ctx, appID, batchID, fmt.Sprintf("failed to update batch status to QUEUED: %v", err))
 	}
 
 	// Update status to DELIVERING
-	if err := p.store.UpdateBatchStatus(ctx, batchID, domain.BatchStatusDelivering); err != nil {
-		return p.failBatch(ctx, batchID, fmt.Sprintf("failed to update batch status to DELIVERING: %v", err))
+	if err := p.store.UpdateBatchStatus(ctx, appID, batchID, domain.BatchStatusDelivering); err != nil {
+		return p.failBatch(ctx, appID, batchID, fmt.Sprintf("failed to update batch status to DELIVERING: %v", err))
 	}
 
 	// Create notifications for each recipient (fan-out)
@@ -88,43 +88,44 @@ func (p *Processor) ProcessBatch(ctx context.Context, batchID uuid.UUID) error {
 			"phone":        r.Phone,
 			"device_token": r.DeviceToken,
 		}
-		if err := p.createNotificationForRecipient(ctx, batch, recipient); err != nil {
+		if err := p.createNotificationForRecipient(ctx, appID, batch, recipient); err != nil {
 			// Log error but continue with other recipients
 			fmt.Printf("failed to create notification for recipient: %v\n", err)
-			if err := p.store.IncrementBatchFailed(ctx, batchID); err != nil {
+			if err := p.store.IncrementBatchFailed(ctx, appID, batchID); err != nil {
 				fmt.Printf("failed to increment batch failed count: %v\n", err)
 			}
 			continue
 		}
 
-		if err := p.store.IncrementBatchSent(ctx, batchID); err != nil {
+		if err := p.store.IncrementBatchSent(ctx, appID, batchID); err != nil {
 			fmt.Printf("failed to increment batch sent count: %v\n", err)
 		}
 	}
 
 	// Update status to COMPLETED
-	return p.store.UpdateBatchStatus(ctx, batchID, domain.BatchStatusCompleted)
+	return p.store.UpdateBatchStatus(ctx, appID, batchID, domain.BatchStatusCompleted)
 }
 
 // createNotificationForRecipient creates a notification for a single recipient
-func (p *Processor) createNotificationForRecipient(ctx context.Context, batch *domain.Batch, recipient map[string]interface{}) error {
+func (p *Processor) createNotificationForRecipient(ctx context.Context, appID uuid.UUID, batch *domain.Batch, recipient map[string]interface{}) error {
 	// Render template with recipient data
-	subject, body, err := p.renderTemplate(ctx, batch.TemplateName, batch.TemplateData, recipient)
+	subject, body, err := p.renderTemplate(ctx, appID, batch.TemplateName, batch.TemplateData, recipient)
 	if err != nil {
 		return fmt.Errorf("failed to render template: %w", err)
 	}
 
 	// Create notification based on channel
 	notification := &domain.Notification{
-		BatchID:    &batch.ID,
-		Channel:    batch.Channel,
-		Subject:    &subject,
-		Body:       body,
-		Priority:   batch.Priority,
-		Recipient:  recipient,
-		Status:     domain.StatusPending,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		ApplicationID: appID,
+		BatchID:       &batch.ID,
+		Channel:       batch.Channel,
+		Subject:       &subject,
+		Body:          body,
+		Priority:      batch.Priority,
+		Recipient:     recipient,
+		Status:        domain.StatusPending,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
 	// Send notification via provider
@@ -132,9 +133,9 @@ func (p *Processor) createNotificationForRecipient(ctx context.Context, batch *d
 }
 
 // renderTemplate renders a template with template data and recipient data merged
-func (p *Processor) renderTemplate(ctx context.Context, templateName string, templateData map[string]interface{}, recipient map[string]interface{}) (string, string, error) {
+func (p *Processor) renderTemplate(ctx context.Context, appID uuid.UUID, templateName string, templateData map[string]interface{}, recipient map[string]interface{}) (string, string, error) {
 	// Fetch template
-	tmpl, err := p.templateRepository.GetByName(ctx, templateName)
+	tmpl, err := p.templateRepository.GetByName(ctx, appID, templateName)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to fetch template: %w", err)
 	}
@@ -183,6 +184,6 @@ func (p *Processor) renderTemplateString(templateStr string, data map[string]int
 }
 
 // failBatch marks batch as failed with error message
-func (p *Processor) failBatch(ctx context.Context, batchID uuid.UUID, errMsg string) error {
-	return p.store.UpdateBatchError(ctx, batchID, errMsg)
+func (p *Processor) failBatch(ctx context.Context, appID uuid.UUID, batchID uuid.UUID, errMsg string) error {
+	return p.store.UpdateBatchError(ctx, appID, batchID, errMsg)
 }

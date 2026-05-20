@@ -32,6 +32,11 @@ func NewDatasourceHandler(store *store.PostgresStore) *DatasourceHandler {
 // @Security     Bearer
 // @Router       /api/v1/datasources [post]
 func (h *DatasourceHandler) CreateDatasource(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	var req CreateDatasourceRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body", "details": err.Error()})
@@ -42,15 +47,16 @@ func (h *DatasourceHandler) CreateDatasource(c *fiber.Ctx) error {
 
 	now := time.Now()
 	ds := &domain.Datasource{
-		ID:         uuid.New(),
-		Name:       req.Name,
-		BaseURL:    req.BaseURL,
-		AuthType:   req.AuthType,
-		AuthConfig: req.AuthConfig,
-		Endpoints:  req.Endpoints,
-		Active:     true,
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		ID:            uuid.New(),
+		ApplicationID: appID,
+		Name:          req.Name,
+		BaseURL:       req.BaseURL,
+		AuthType:      req.AuthType,
+		AuthConfig:    req.AuthConfig,
+		Endpoints:     req.Endpoints,
+		Active:        true,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
 	if err := h.store.CreateDatasource(c.Context(), ds); err != nil {
@@ -68,7 +74,12 @@ func (h *DatasourceHandler) CreateDatasource(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/datasources [get]
 func (h *DatasourceHandler) ListDatasources(c *fiber.Ctx) error {
-	datasources, err := h.store.ListDatasources(c.Context())
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
+	datasources, err := h.store.ListDatasources(c.Context(), appID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to list datasources", "details": err.Error()})
 	}
@@ -90,11 +101,16 @@ func (h *DatasourceHandler) ListDatasources(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/datasources/{id} [get]
 func (h *DatasourceHandler) GetDatasource(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid id format"})
 	}
-	ds, err := h.store.GetDatasourceByID(c.Context(), id)
+	ds, err := h.store.GetDatasourceByID(c.Context(), appID, id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "datasource not found"})
 	}
@@ -115,11 +131,16 @@ func (h *DatasourceHandler) GetDatasource(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/datasources/{id} [patch]
 func (h *DatasourceHandler) UpdateDatasource(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid id format"})
 	}
-	ds, err := h.store.GetDatasourceByID(c.Context(), id)
+	ds, err := h.store.GetDatasourceByID(c.Context(), appID, id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "datasource not found"})
 	}
@@ -143,7 +164,7 @@ func (h *DatasourceHandler) UpdateDatasource(c *fiber.Ctx) error {
 	}
 	ds.UpdatedAt = time.Now()
 
-	if err := h.store.UpdateDatasource(c.Context(), ds); err != nil {
+	if err := h.store.UpdateDatasource(c.Context(), appID, ds); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to update datasource", "details": err.Error()})
 	}
 	return c.JSON(ds)
@@ -161,14 +182,19 @@ func (h *DatasourceHandler) UpdateDatasource(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/datasources/{id} [delete]
 func (h *DatasourceHandler) DeleteDatasource(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid id format"})
 	}
-	if _, err := h.store.GetDatasourceByID(c.Context(), id); err != nil {
+	if _, err := h.store.GetDatasourceByID(c.Context(), appID, id); err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "datasource not found"})
 	}
-	if err := h.store.DeleteDatasource(c.Context(), id); err != nil {
+	if err := h.store.DeleteDatasource(c.Context(), appID, id); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to delete datasource"})
 	}
 	return c.JSON(fiber.Map{"message": "datasource deactivated"})

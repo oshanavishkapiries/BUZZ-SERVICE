@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { Sidebar } from '@/components/Sidebar';
-import { HealthStatus } from '@/components/HealthStatus';
+import { AppWrapper } from '@/components/AppWrapper';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -28,13 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-[var(--bg-primary)] text-[var(--text-primary)] antialiased min-h-screen">
-        <Sidebar />
-        <HealthStatus />
-        <div className="ml-56 min-h-screen flex flex-col">
-          <main className="flex-1 p-8 max-w-6xl">
-            {children}
-          </main>
-        </div>
+        <AppWrapper>{children}</AppWrapper>
       </body>
     </html>
   );

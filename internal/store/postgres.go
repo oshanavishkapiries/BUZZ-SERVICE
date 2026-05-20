@@ -67,8 +67,8 @@ func (s *PostgresStore) UpdateAPIKeyUsage(ctx context.Context, id uuid.UUID) err
 	return repo.UpdateUsage(ctx, id)
 }
 
-// GetTemplateByName retrieves a template by name
-func (s *PostgresStore) GetTemplateByName(ctx context.Context, name string) (*domain.Template, error) {
+// GetTemplateByName retrieves a template by name, scoped to application
+func (s *PostgresStore) GetTemplateByName(ctx context.Context, appID uuid.UUID, name string) (*domain.Template, error) {
 	repo := NewTemplateRepository(s.db)
-	return repo.GetByName(ctx, name)
+	return repo.GetByName(ctx, appID, name)
 }
