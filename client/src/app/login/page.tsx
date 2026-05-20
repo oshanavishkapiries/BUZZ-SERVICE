@@ -100,10 +100,7 @@ export default function LoginPage() {
 				</form>
 
 				<div className="mt-6 text-center text-sm text-[var(--text-muted)] relative z-10">
-					Don't have an account?{' '}
-					<Link href="/signup" className="text-[var(--accent)] hover:underline font-medium">
-						Sign up
-					</Link>
+					Need an account? Please contact your system administrator to get added.
 				</div>
 			</div>
 		</div>

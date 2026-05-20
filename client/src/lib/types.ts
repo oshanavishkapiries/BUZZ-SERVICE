@@ -243,6 +243,16 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  role: string;
+}
+
+export interface ApplicationMemberDetail {
+  application_id: string;
+  user_id: string;
+  role: string;
+  name: string;
+  email: string;
+  created_at: string;
 }
 
 export interface Application {

@@ -322,6 +322,50 @@ class APIClient {
       noUserID: true,
     });
   }
+
+  // User Account Administration (Only for system owners)
+  async listUsers(): Promise<{ users: Types.User[] }> {
+    return this.request<{ users: Types.User[] }>('/api/v1/users', {
+      noUserID: true,
+    });
+  }
+
+  async createUser(req: { name: string; email: string; password: string; role?: string }): Promise<{ user: Types.User }> {
+    return this.request<{ user: Types.User }>('/api/v1/users', {
+      method: 'POST',
+      body: JSON.stringify(req),
+      noUserID: true,
+    });
+  }
+
+  async deleteUser(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/v1/users/${id}`, {
+      method: 'DELETE',
+      noUserID: true,
+    });
+  }
+
+  // Application Workspace Members Management
+  async listApplicationMembers(appId: string): Promise<{ members: Types.ApplicationMemberDetail[] }> {
+    return this.request<{ members: Types.ApplicationMemberDetail[] }>(`/api/v1/applications/${appId}/members`, {
+      noUserID: true,
+    });
+  }
+
+  async addApplicationMember(appId: string, req: { email: string; role?: string }): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/v1/applications/${appId}/members`, {
+      method: 'POST',
+      body: JSON.stringify(req),
+      noUserID: true,
+    });
+  }
+
+  async removeApplicationMember(appId: string, userId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/v1/applications/${appId}/members/${userId}`, {
+      method: 'DELETE',
+      noUserID: true,
+    });
+  }
 }
 
 export const api = new APIClient();

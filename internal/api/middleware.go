@@ -128,9 +128,17 @@ func AuthMiddleware(db *store.PostgresStore, jwtSecret string) fiber.Handler {
 		}
 
 		// Dashboard user routes need X-Application-ID header to scope resource operations
-		// EXCEPT for global user/workspace management routes: /api/v1/auth/me and /api/v1/applications
+		// EXCEPT for global user/workspace management routes: /api/v1/auth/me, /api/v1/applications, and /api/v1/users
 		path := c.Path()
-		isGlobalRoute := path == "/api/v1/auth/me" || path == "/api/v1/applications"
+		isGlobalRoute := path == "/api/v1/auth/me" || path == "/api/v1/applications" || strings.HasPrefix(path, "/api/v1/users")
+
+		if isGlobalRoute {
+			// Set context values for global routes without application scope and bypass application validation entirely
+			c.Locals("auth_user_id", userIDStr)
+			c.Locals("user_id", userIDStr)
+			c.Locals(string(ContextKeyScopes), []string{"*"})
+			return c.Next()
+		}
 
 		appIDStr := c.Get("X-Application-ID")
 		if appIDStr == "" {
@@ -138,13 +146,6 @@ func AuthMiddleware(db *store.PostgresStore, jwtSecret string) fiber.Handler {
 		}
 
 		if appIDStr == "" {
-			if isGlobalRoute {
-				// Set context values for global routes without application scope
-				c.Locals("auth_user_id", userIDStr)
-				c.Locals("user_id", userIDStr)
-				c.Locals(string(ContextKeyScopes), []string{"*"})
-				return c.Next()
-			}
 			return c.Status(400).JSON(fiber.Map{
 				"error": "X-Application-ID header or application_id query parameter is required for session-based requests",
 			})

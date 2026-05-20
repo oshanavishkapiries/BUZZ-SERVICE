@@ -116,6 +116,7 @@ type User struct {
 	Email        string    `json:"email" db:"email"`
 	PasswordHash string    `json:"-" db:"password_hash"`
 	Name         string    `json:"name" db:"name"`
+	Role         string    `json:"role" db:"role"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -136,6 +137,16 @@ type ApplicationMember struct {
 	UserID        uuid.UUID `json:"user_id" db:"user_id"`
 	Role          string    `json:"role" db:"role"`
 	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+}
+
+// ApplicationMemberDetail represents a member with user profile details
+type ApplicationMemberDetail struct {
+	ApplicationID uuid.UUID `json:"application_id"`
+	UserID        uuid.UUID `json:"user_id"`
+	Role          string    `json:"role"`
+	Name          string    `json:"name"`
+	Email         string    `json:"email"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // Notification represents an individual notification
