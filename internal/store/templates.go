@@ -24,17 +24,17 @@ func NewTemplateRepository(db *sql.DB) *TemplateRepository {
 func (r *TemplateRepository) Create(ctx context.Context, template *domain.Template) error {
 	query := `
 		INSERT INTO templates (
-			id, name, description, channels, subject, body, html_body,
+			id, application_id, name, description, channels, subject, body, html_body,
 			variables, default_values, config, is_active, created_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 		) RETURNING created_at, updated_at
 	`
 
 	template.ID = uuid.New()
 
 	err := r.db.QueryRowContext(ctx, query,
-		template.ID, template.Name, template.Description, pq.Array(template.Channels),
+		template.ID, template.ApplicationID, template.Name, template.Description, pq.Array(template.Channels),
 		template.Subject, template.Body, template.HTMLBody, pq.Array(template.Variables),
 		template.DefaultValues, template.Config, template.IsActive, template.CreatedBy,
 	).Scan(&template.CreatedAt, &template.UpdatedAt)
@@ -46,19 +46,19 @@ func (r *TemplateRepository) Create(ctx context.Context, template *domain.Templa
 	return nil
 }
 
-// GetByID retrieves a template by ID
-func (r *TemplateRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Template, error) {
+// GetByID retrieves a template by ID and application ID
+func (r *TemplateRepository) GetByID(ctx context.Context, appID uuid.UUID, id uuid.UUID) (*domain.Template, error) {
 	query := `
-		SELECT id, name, description, channels, subject, body, html_body,
+		SELECT id, application_id, name, description, channels, subject, body, html_body,
 			variables, default_values, config, is_active, created_at, updated_at,
 			created_by, deleted_at
 		FROM templates
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE id = $1 AND application_id = $2 AND deleted_at IS NULL
 	`
 
 	template := &domain.Template{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&template.ID, &template.Name, &template.Description, pq.Array(&template.Channels),
+	err := r.db.QueryRowContext(ctx, query, id, appID).Scan(
+		&template.ID, &template.ApplicationID, &template.Name, &template.Description, pq.Array(&template.Channels),
 		&template.Subject, &template.Body, &template.HTMLBody, pq.Array(&template.Variables),
 		&template.DefaultValues, &template.Config, &template.IsActive, &template.CreatedAt,
 		&template.UpdatedAt, &template.CreatedBy, &template.DeletedAt,
@@ -74,19 +74,19 @@ func (r *TemplateRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain
 	return template, nil
 }
 
-// GetByName retrieves a template by name (case-insensitive)
-func (r *TemplateRepository) GetByName(ctx context.Context, name string) (*domain.Template, error) {
+// GetByName retrieves a template by name (case-insensitive) and application ID
+func (r *TemplateRepository) GetByName(ctx context.Context, appID uuid.UUID, name string) (*domain.Template, error) {
 	query := `
-		SELECT id, name, description, channels, subject, body, html_body,
+		SELECT id, application_id, name, description, channels, subject, body, html_body,
 			variables, default_values, config, is_active, created_at, updated_at,
 			created_by, deleted_at
 		FROM templates
-		WHERE LOWER(name) = LOWER($1) AND deleted_at IS NULL
+		WHERE LOWER(name) = LOWER($1) AND application_id = $2 AND deleted_at IS NULL
 	`
 
 	template := &domain.Template{}
-	err := r.db.QueryRowContext(ctx, query, name).Scan(
-		&template.ID, &template.Name, &template.Description, pq.Array(&template.Channels),
+	err := r.db.QueryRowContext(ctx, query, name, appID).Scan(
+		&template.ID, &template.ApplicationID, &template.Name, &template.Description, pq.Array(&template.Channels),
 		&template.Subject, &template.Body, &template.HTMLBody, pq.Array(&template.Variables),
 		&template.DefaultValues, &template.Config, &template.IsActive, &template.CreatedAt,
 		&template.UpdatedAt, &template.CreatedBy, &template.DeletedAt,
@@ -109,14 +109,14 @@ func (r *TemplateRepository) Update(ctx context.Context, template *domain.Templa
 			name = $1, description = $2, channels = $3, subject = $4, body = $5,
 			html_body = $6, variables = $7, default_values = $8, config = $9,
 			is_active = $10, updated_at = NOW()
-		WHERE id = $11 AND deleted_at IS NULL
+		WHERE id = $11 AND application_id = $12 AND deleted_at IS NULL
 		RETURNING updated_at
 	`
 
 	err := r.db.QueryRowContext(ctx, query,
 		template.Name, template.Description, pq.Array(template.Channels), template.Subject,
 		template.Body, template.HTMLBody, pq.Array(template.Variables), template.DefaultValues,
-		template.Config, template.IsActive, template.ID,
+		template.Config, template.IsActive, template.ID, template.ApplicationID,
 	).Scan(&template.UpdatedAt)
 
 	if err == sql.ErrNoRows {
@@ -129,18 +129,18 @@ func (r *TemplateRepository) Update(ctx context.Context, template *domain.Templa
 	return nil
 }
 
-// List retrieves templates with optional filters
-func (r *TemplateRepository) List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*domain.Template, error) {
+// List retrieves templates with optional filters for a specific application
+func (r *TemplateRepository) List(ctx context.Context, appID uuid.UUID, filters map[string]interface{}, limit, offset int) ([]*domain.Template, error) {
 	query := `
-		SELECT id, name, description, channels, subject, body, html_body,
+		SELECT id, application_id, name, description, channels, subject, body, html_body,
 			variables, default_values, config, is_active, created_at, updated_at,
 			created_by, deleted_at
 		FROM templates
-		WHERE deleted_at IS NULL
+		WHERE application_id = $1 AND deleted_at IS NULL
 	`
 
-	args := []interface{}{}
-	argIndex := 1
+	args := []interface{}{appID}
+	argIndex := 2
 
 	// Add filters
 	if isActive, ok := filters["is_active"].(bool); ok {
@@ -176,7 +176,7 @@ func (r *TemplateRepository) List(ctx context.Context, filters map[string]interf
 	for rows.Next() {
 		template := &domain.Template{}
 		err := rows.Scan(
-			&template.ID, &template.Name, &template.Description, pq.Array(&template.Channels),
+			&template.ID, &template.ApplicationID, &template.Name, &template.Description, pq.Array(&template.Channels),
 			&template.Subject, &template.Body, &template.HTMLBody, pq.Array(&template.Variables),
 			&template.DefaultValues, &template.Config, &template.IsActive, &template.CreatedAt,
 			&template.UpdatedAt, &template.CreatedBy, &template.DeletedAt,
@@ -195,14 +195,14 @@ func (r *TemplateRepository) List(ctx context.Context, filters map[string]interf
 }
 
 // Delete soft deletes a template
-func (r *TemplateRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *TemplateRepository) Delete(ctx context.Context, appID uuid.UUID, id uuid.UUID) error {
 	query := `
 		UPDATE templates SET
 			deleted_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE id = $1 AND application_id = $2 AND deleted_at IS NULL
 	`
 
-	result, err := r.db.ExecContext(ctx, query, id)
+	result, err := r.db.ExecContext(ctx, query, id, appID)
 	if err != nil {
 		return fmt.Errorf("failed to delete template: %w", err)
 	}
@@ -218,12 +218,12 @@ func (r *TemplateRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// Count returns the total count of templates matching the filters
-func (r *TemplateRepository) Count(ctx context.Context, filters map[string]interface{}) (int, error) {
-	query := `SELECT COUNT(*) FROM templates WHERE deleted_at IS NULL`
+// Count returns the total count of templates matching the filters for a specific application
+func (r *TemplateRepository) Count(ctx context.Context, appID uuid.UUID, filters map[string]interface{}) (int, error) {
+	query := `SELECT COUNT(*) FROM templates WHERE application_id = $1 AND deleted_at IS NULL`
 
-	args := []interface{}{}
-	argIndex := 1
+	args := []interface{}{appID}
+	argIndex := 2
 
 	// Add filters
 	if isActive, ok := filters["is_active"].(bool); ok {

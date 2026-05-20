@@ -70,8 +70,11 @@ func (p *Producer) EnqueueNotification(ctx context.Context, n *domain.Notificati
 }
 
 // EnqueueBatchProcess enqueues a batch processing task
-func (p *Producer) EnqueueBatchProcess(ctx context.Context, batchID string) error {
-	payload, err := json.Marshal(map[string]string{"batch_id": batchID})
+func (p *Producer) EnqueueBatchProcess(ctx context.Context, appID string, batchID string) error {
+	payload, err := json.Marshal(map[string]string{
+		"application_id": appID,
+		"batch_id":       batchID,
+	})
 	if err != nil {
 		return err
 	}

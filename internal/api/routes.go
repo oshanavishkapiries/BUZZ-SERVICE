@@ -20,7 +20,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowMethods:     "GET,POST,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-User-ID",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-User-ID,X-Application-ID",
 		AllowCredentials: false,
 	}))
 
@@ -43,8 +43,35 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	// API v1 routes
 	v1 := app.Group("/api/v1")
 
+	// Public Auth Endpoints (No Auth Needed)
+	authHandler := NewAuthHandler(db, cfg.Server.JWTSecret)
+	v1.Post("/auth/signup", authHandler.Signup)
+	v1.Post("/auth/login", authHandler.Login)
+
 	// Authenticated routes
-	v1.Use(AuthMiddleware(db))
+	v1.Use(AuthMiddleware(db, cfg.Server.JWTSecret))
+
+	// Authenticated user profile
+	v1.Get("/auth/me", authHandler.Me)
+
+	// Applications and API keys management (authenticated by JWT session)
+	appHandler := NewApplicationHandler(db)
+	v1.Get("/applications", appHandler.ListApplications)
+	v1.Post("/applications", appHandler.CreateApplication)
+	v1.Get("/applications/:appId/keys", appHandler.ListAPIKeys)
+	v1.Post("/applications/:appId/keys", appHandler.CreateAPIKey)
+	v1.Delete("/applications/:appId/keys/:keyId", appHandler.DeleteAPIKey)
+
+	// Workspace members management
+	v1.Get("/applications/:appId/members", appHandler.ListMembers)
+	v1.Post("/applications/:appId/members", appHandler.AddMember)
+	v1.Delete("/applications/:appId/members/:userId", appHandler.RemoveMember)
+
+	// User account administration (Only available to system 'owner')
+	userHandler := NewUserHandler(db)
+	v1.Get("/users", userHandler.ListUsers)
+	v1.Post("/users", userHandler.CreateUser)
+	v1.Delete("/users/:id", userHandler.DeleteUser)
 
 	// Notifications
 	notifHandler := NewNotificationHandler(db, producer, gateway)

@@ -8,7 +8,7 @@ import { NotificationMatrix } from '@/components/NotificationMatrix';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bell, Radio, Inbox, FileText, Layers, Database, Activity } from 'lucide-react';
+import { Bell, Radio, Inbox, FileText, Layers, Database, Activity, Users } from 'lucide-react';
 
 const quickLinks = [
   { href: '/notifications', label: 'Send Notification', description: 'Trigger a single notification', icon: Bell },
@@ -23,12 +23,21 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<number | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     api.getHealth()
       .then(setHealth)
       .catch(e => setError(e instanceof Error ? e.message : 'Failed to reach service'))
       .finally(() => setLoading(false));
+
+    api.getMe()
+      .then(res => {
+        if (res && res.user) {
+          setUser(res.user);
+        }
+      })
+      .catch(() => {});
 
     const fetchOnline = () => {
       api.getOnlineStats()
@@ -109,26 +118,39 @@ export default function Dashboard() {
       <NotificationMatrix />
 
       {/* Quick links */}
-      <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-3">Quick Links</h2>
-        <div className="grid grid-cols-3 gap-3">
-          {quickLinks.map(({ href, label, description, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="group flex items-start gap-3 p-4 rounded-[var(--radius)] border border-[var(--border-color)] bg-[var(--surface-1)] hover:border-[var(--accent)] hover:shadow-[var(--shadow-md)] transition-all"
-            >
-              <div className="mt-0.5 flex items-center justify-center w-7 h-7 rounded-[var(--radius)] bg-[var(--accent-subtle)] text-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-white transition-colors shrink-0">
-                <Icon size={14} />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-[var(--text-primary)]">{label}</div>
-                <div className="text-xs text-[var(--text-muted)] mt-0.5">{description}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+      {(() => {
+        const currentQuickLinks = [...quickLinks];
+        if (user && user.role === 'owner') {
+          currentQuickLinks.push({
+            href: '/users',
+            label: 'Users & Workspaces',
+            description: 'Manage user accounts and workspace access',
+            icon: Users,
+          });
+        }
+        return (
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-3">Quick Links</h2>
+            <div className="grid grid-cols-3 gap-3">
+              {currentQuickLinks.map(({ href, label, description, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="group flex items-start gap-3 p-4 rounded-[var(--radius)] border border-[var(--border-color)] bg-[var(--surface-1)] hover:border-[var(--accent)] hover:shadow-[var(--shadow-md)] transition-all"
+                >
+                  <div className="mt-0.5 flex items-center justify-center w-7 h-7 rounded-[var(--radius)] bg-[var(--accent-subtle)] text-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-white transition-colors shrink-0">
+                    <Icon size={14} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--text-primary)]">{label}</div>
+                    <div className="text-xs text-[var(--text-muted)] mt-0.5">{description}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

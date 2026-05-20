@@ -76,6 +76,8 @@ Next.js 15 App Router application running on port 3000.
 | Route | Purpose |
 |-------|---------|
 | `/` | Dashboard — health, notification matrix, online users |
+| `/login` | Authentication page |
+| `/signup` | Authentication page (Self-registration disabled; contact admin) |
 | `/notifications` | Send form + list |
 | `/stream` | Live SSE event feed |
 | `/inbox` | In-app inbox with SSE auto-refresh |
@@ -86,9 +88,10 @@ Next.js 15 App Router application running on port 3000.
 | `/providers` | Provider config CRUD |
 | `/docs` | Integration documentation |
 | `/settings` | API URL, key, user ID configuration |
+| `/users` | User Accounts & Application Workspace Permissions Management |
 
 ### Configuration
-- Reads from `localStorage`: `buzz_api_url`, `buzz_api_key`, `buzz_user_id`
+- Reads from `localStorage`: `buzz_api_url`, `buzz_api_key`, `buzz_user_id`, `buzz_jwt_token`, `buzz_active_app_id`
 
 ---
 
@@ -96,6 +99,8 @@ Next.js 15 App Router application running on port 3000.
 
 | Method | Path | Description |
 |--------|------|-------------|
+| POST | `/api/v1/auth/login` | Authenticate user |
+| GET | `/api/v1/auth/me` | Get active user profile |
 | POST | `/api/v1/notifications` | Send notification |
 | GET | `/api/v1/notifications` | List notifications |
 | GET | `/api/v1/notifications/:id` | Get notification |
@@ -115,6 +120,17 @@ Next.js 15 App Router application running on port 3000.
 | GET | `/api/v1/stream/stats` | Stream statistics |
 | GET | `/api/v1/inbox/:user_id` | Get inbox |
 | POST | `/api/v1/devices` | Register device token |
+| GET | `/api/v1/applications` | List applications |
+| POST | `/api/v1/applications` | Create application |
+| GET | `/api/v1/applications/:appId/keys` | List API keys |
+| POST | `/api/v1/applications/:appId/keys` | Create API key |
+| DELETE | `/api/v1/applications/:appId/keys/:keyId` | Delete API key |
+| GET | `/api/v1/applications/:appId/members` | List application members |
+| POST | `/api/v1/applications/:appId/members` | Add user to application |
+| DELETE | `/api/v1/applications/:appId/members/:userId` | Remove user from application |
+| GET | `/api/v1/users` | List system-wide users (Owner only) |
+| POST | `/api/v1/users` | Create user (Owner only) |
+| DELETE | `/api/v1/users/:id` | Delete user (Owner only) |
 | GET | `/swagger/` | Swagger UI |
 
 ---
@@ -131,4 +147,4 @@ Next.js 15 App Router application running on port 3000.
 
 ---
 
-*Last updated: 2026-05-07*
+*Last updated: 2026-05-20*

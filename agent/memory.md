@@ -44,6 +44,8 @@
 - [x] API key authentication
 - [x] Swagger documentation
 - [x] Next.js client dashboard
+- [x] Role-Based Access Control (RBAC) and application workspaces
+- [x] System-wide user administration
 
 ### In Progress
 - [ ] *(none)*
@@ -58,6 +60,7 @@
 | Date | Change | Files Modified | Notes |
 |------|--------|----------------|-------|
 | 2026-05-07 | Agent workflow initialized | `agent/`, `AGENT.md` | Created memory-driven agent workflow |
+| 2026-05-20 | RBAC and Workspace Members | `api/*`, `client/*` | Disabled public signup, added global endpoints exception in AuthMiddleware, added system owner role bypass, created User management UI, documented roles in README, added Copy Key option in Settings, reduced login card border radius, and updated developer docs page. |
 
 ---
 
@@ -93,4 +96,4 @@ Use checksums to detect what changed between sessions.
 
 ---
 
-*Last updated: 2026-05-07*
+*Last updated: 2026-05-20*
