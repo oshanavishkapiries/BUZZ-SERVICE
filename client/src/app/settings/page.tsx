@@ -28,7 +28,15 @@ export default function SettingsPage() {
 	const [generating, setGenerating] = useState(false);
 	const [generatedRawKey, setGeneratedRawKey] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
+	const [overrideCopied, setOverrideCopied] = useState(false);
 	const [keyError, setKeyError] = useState<string | null>(null);
+
+	const handleCopyOverride = () => {
+		if (!apiKey) return;
+		navigator.clipboard.writeText(apiKey);
+		setOverrideCopied(true);
+		setTimeout(() => setOverrideCopied(false), 2000);
+	};
 
 	useEffect(() => {
 		const c = getConfig();
@@ -147,15 +155,26 @@ export default function SettingsPage() {
 										value={apiKey}
 										onChange={e => setApiKey(e.target.value)}
 										placeholder="buzz_..."
-										className="pr-10 font-mono"
+										className="pr-16 font-mono"
 									/>
-									<button
-										type="button"
-										onClick={() => setShowKey(v => !v)}
-										className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-									>
-										{showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-									</button>
+									<div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+										<button
+											type="button"
+											onClick={handleCopyOverride}
+											className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+											title="Copy Key"
+										>
+											{overrideCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+										</button>
+										<button
+											type="button"
+											onClick={() => setShowKey(v => !v)}
+											className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+											title={showKey ? "Hide Key" : "Show Key"}
+										>
+											{showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+										</button>
+									</div>
 								</div>
 								<p className="text-xs text-[var(--text-muted)] mt-1">Fallback token for dashboard request simulation</p>
 							</div>

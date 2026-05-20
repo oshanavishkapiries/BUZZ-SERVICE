@@ -97,6 +97,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 			"id":    user.ID,
 			"email": user.Email,
 			"name":  user.Name,
+			"role":  user.Role,
 		},
 	})
 }
@@ -133,6 +134,7 @@ func (h *AuthHandler) Me(c *fiber.Ctx) error {
 			"id":    user.ID,
 			"email": user.Email,
 			"name":  user.Name,
+			"role":  user.Role,
 		},
 	})
 }

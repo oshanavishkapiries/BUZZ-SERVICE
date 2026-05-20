@@ -60,7 +60,7 @@
 | Date | Change | Files Modified | Notes |
 |------|--------|----------------|-------|
 | 2026-05-07 | Agent workflow initialized | `agent/`, `AGENT.md` | Created memory-driven agent workflow |
-| 2026-05-20 | RBAC and Workspace Members | `api/*`, `client/*` | Disabled public signup, added global endpoints exception in AuthMiddleware, added system owner role bypass, created User management UI, and documented roles in README. |
+| 2026-05-20 | RBAC and Workspace Members | `api/*`, `client/*` | Disabled public signup, added global endpoints exception in AuthMiddleware, added system owner role bypass, created User management UI, documented roles in README, added Copy Key option in Settings, reduced login card border radius, and updated developer docs page. |
 
 ---
 
