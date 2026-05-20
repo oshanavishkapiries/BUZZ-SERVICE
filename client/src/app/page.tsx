@@ -1,22 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { api } from '@/lib/api';
 import { HealthResponse } from '@/lib/types';
 import { NotificationMatrix } from '@/components/NotificationMatrix';
+import { DashboardCharts } from '@/components/DashboardCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bell, Radio, Inbox, FileText, Layers, Database, Activity, Users } from 'lucide-react';
-
-const quickLinks = [
-  { href: '/notifications', label: 'Send Notification', description: 'Trigger a single notification', icon: Bell },
-  { href: '/stream',        label: 'Live Stream',        description: 'Watch SSE events in real time',  icon: Radio },
-  { href: '/inbox',         label: 'Inbox',              description: 'In-app messages for this user',  icon: Inbox },
-  { href: '/templates',     label: 'Templates',          description: 'Manage reusable templates',      icon: FileText },
-  { href: '/batches',       label: 'Batches',            description: 'Send bulk notifications',        icon: Layers },
-];
+import { Database, Activity } from 'lucide-react';
 
 export default function Dashboard() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -126,43 +118,11 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      {/* Dashboard Charts */}
+      <DashboardCharts />
+
       {/* Notification matrix */}
       <NotificationMatrix />
-
-      {/* Quick links */}
-      {(() => {
-        const currentQuickLinks = [...quickLinks];
-        if (user && user.role === 'owner') {
-          currentQuickLinks.push({
-            href: '/users',
-            label: 'Users & Workspaces',
-            description: 'Manage user accounts and workspace access',
-            icon: Users,
-          });
-        }
-        return (
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-3">Quick Links</h2>
-            <div className="grid grid-cols-3 gap-3">
-              {currentQuickLinks.map(({ href, label, description, icon: Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="group flex items-start gap-3 p-4 rounded-[var(--radius)] border border-[var(--border-color)] bg-[var(--surface-1)] hover:border-[var(--accent)] hover:shadow-[var(--shadow-md)] transition-all"
-                >
-                  <div className="mt-0.5 flex items-center justify-center w-7 h-7 rounded-[var(--radius)] bg-[var(--accent-subtle)] text-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-white transition-colors shrink-0">
-                    <Icon size={14} />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--text-primary)]">{label}</div>
-                    <div className="text-xs text-[var(--text-muted)] mt-0.5">{description}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }

@@ -64,6 +64,7 @@
 | 2026-05-20 | Cascade Delete Fix & Switcher UI | `internal/api/users.go`, `internal/store/users_and_applications.go`, `client/src/components/Sidebar.tsx`, `client/src/app/page.tsx` | Added application ownership transfer to the deleting admin inside DeleteUser, added Create Workspace button to Sidebar for empty workspaces, and added a warning banner to Dashboard when no active workspace is selected. |
 | 2026-05-20 | SMTP Email Content-Type Fix | `internal/provider/email/smtp.go` | Moved Content-Type and boundary configuration before building headers list to prevent raw multipart MIME layout display in email clients. |
 | 2026-05-20 | HTML Email Auto-Detection | `internal/provider/email/types.go` | Added auto-detection for HTML content to prevent the template rendering engine from escaping HTML tags (like '<' to '&lt;') if the body is already HTML. |
+| 2026-05-20 | Dashboard Charts & UI cleanups | `client/src/app/page.tsx`, `client/src/components/DashboardCharts.tsx` | Removed the bottom Quick Links section from the dashboard, added a new Recharts-powered DashboardCharts component with a Delivery Status Donut Chart and Channel Stacked Bar Chart. |
 
 ---
 
