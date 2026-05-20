@@ -20,7 +20,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowMethods:     "GET,POST,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-User-ID",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-User-ID,X-Application-ID",
 		AllowCredentials: false,
 	}))
 
