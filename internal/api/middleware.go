@@ -128,14 +128,23 @@ func AuthMiddleware(db *store.PostgresStore, jwtSecret string) fiber.Handler {
 		}
 
 		// Dashboard user routes need X-Application-ID header to scope resource operations
-		// EXCEPT for global user/workspace management routes: /api/v1/auth/me, /api/v1/applications, and /api/v1/users
+		// EXCEPT for global user/workspace management routes: /api/v1/auth/me, /api/v1/applications, /api/v1/users, and real-time stream /api/v1/stream
 		path := c.Path()
-		isGlobalRoute := path == "/api/v1/auth/me" || path == "/api/v1/applications" || strings.HasPrefix(path, "/api/v1/users")
+		isGlobalRoute := path == "/api/v1/auth/me" || path == "/api/v1/applications" || strings.HasPrefix(path, "/api/v1/users") || strings.HasPrefix(path, "/api/v1/stream")
 
 		if isGlobalRoute {
 			// Set context values for global routes without application scope and bypass application validation entirely
 			c.Locals("auth_user_id", userIDStr)
-			c.Locals("user_id", userIDStr)
+			
+			// Allow query parameter or header to specify/override user_id (needed for developers to monitor user streams)
+			userIDVal := c.Get("X-User-ID")
+			if userIDVal == "" {
+				userIDVal = c.Query("user_id")
+			}
+			if userIDVal == "" {
+				userIDVal = userIDStr
+			}
+			c.Locals("user_id", userIDVal)
 			c.Locals(string(ContextKeyScopes), []string{"*"})
 			return c.Next()
 		}
@@ -174,7 +183,14 @@ func AuthMiddleware(db *store.PostgresStore, jwtSecret string) fiber.Handler {
 
 		// Set context values
 		c.Locals("auth_user_id", userIDStr)
-		c.Locals("user_id", userIDStr)
+
+		// Allow X-User-ID header to override user_id — dashboard admins can query inbox/devices
+		// on behalf of any end-user (e.g. to inspect a recipient's inbox after sending in_app notification)
+		effectiveUserID := c.Get("X-User-ID")
+		if effectiveUserID == "" {
+			effectiveUserID = userIDStr
+		}
+		c.Locals("user_id", effectiveUserID)
 		c.Locals("application_id", appID)
 		// Dashboard users have full permission scopes
 		c.Locals(string(ContextKeyScopes), []string{"*"})

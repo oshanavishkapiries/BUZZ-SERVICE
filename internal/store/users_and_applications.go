@@ -73,10 +73,58 @@ func (s *PostgresStore) ListUsers(ctx context.Context) ([]domain.User, error) {
 	return users, rows.Err()
 }
 
-// DeleteUser deletes a user from the system
-func (s *PostgresStore) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
-	return err
+// DeleteUser deletes a user from the system and transfers any applications they own to the caller (admin)
+func (s *PostgresStore) DeleteUser(ctx context.Context, id uuid.UUID, callerID uuid.UUID) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Get applications owned by this user
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM applications WHERE owner_id = $1", id)
+	if err != nil {
+		return err
+	}
+	var appIDs []uuid.UUID
+	for rows.Next() {
+		var appID uuid.UUID
+		if err := rows.Scan(&appID); err != nil {
+			rows.Close()
+			return err
+		}
+		appIDs = append(appIDs, appID)
+	}
+	rows.Close()
+
+	// 2. Transfer ownership to caller
+	if len(appIDs) > 0 {
+		_, err = tx.ExecContext(ctx, "UPDATE applications SET owner_id = $2 WHERE owner_id = $1", id, callerID)
+		if err != nil {
+			return err
+		}
+
+		// 3. For each application, make the caller an "owner" member
+		for _, appID := range appIDs {
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO application_members (application_id, user_id, role, created_at)
+				VALUES ($1, $2, $3, $4)
+				ON CONFLICT (application_id, user_id) DO UPDATE SET role = 'owner'`,
+				appID, callerID, "owner", time.Now(),
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// 4. Delete the user
+	_, err = tx.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // CreateApplication inserts a new application record and adds the owner as an owner member
@@ -253,4 +301,20 @@ func (s *PostgresStore) ListApplicationMembers(ctx context.Context, appID uuid.U
 		members = append(members, m)
 	}
 	return members, rows.Err()
+}
+
+// UpdateApplication updates an application's name and description
+func (s *PostgresStore) UpdateApplication(ctx context.Context, id uuid.UUID, name string, description *string) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE applications SET name = $1, description = $2, updated_at = NOW()
+		WHERE id = $3`,
+		name, description, id,
+	)
+	return err
+}
+
+// DeleteApplication permanently deletes an application and all its data via CASCADE
+func (s *PostgresStore) DeleteApplication(ctx context.Context, id uuid.UUID) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM applications WHERE id = $1`, id)
+	return err
 }

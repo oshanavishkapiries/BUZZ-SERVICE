@@ -21,15 +21,15 @@ export function useSSE(userId: string, options: UseSSEOptions = {}) {
     if (eventSourceRef.current) return;
 
     const { apiUrl, apiKey } = getConfig();
-    const url = `${apiUrl}/api/v1/stream?token=${encodeURIComponent(apiKey)}&user_id=${encodeURIComponent(userId)}`;
+    const jwtToken = typeof window !== 'undefined' ? localStorage.getItem('buzz_jwt_token') : null;
+    const token = jwtToken || apiKey;
+    const url = `${apiUrl}/api/v1/stream?token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`;
 
     setStatus('connecting');
     setError(null);
 
     try {
-      const eventSource = new EventSource(url, {
-        withCredentials: true,
-      });
+      const eventSource = new EventSource(url);
 
       eventSource.addEventListener('connected', (ev) => {
         const data = JSON.parse(ev.data);

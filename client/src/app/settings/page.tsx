@@ -31,6 +31,8 @@ export default function SettingsPage() {
 	const [overrideCopied, setOverrideCopied] = useState(false);
 	const [keyError, setKeyError] = useState<string | null>(null);
 
+	const [currentUser, setCurrentUser] = useState<any>(null);
+
 	const handleCopyOverride = () => {
 		if (!apiKey) return;
 		navigator.clipboard.writeText(apiKey);
@@ -50,6 +52,20 @@ export default function SettingsPage() {
 		if (appId) {
 			fetchAPIKeys(appId);
 		}
+
+		api.getMe()
+			.then(res => {
+				if (res && res.user) {
+					setCurrentUser(res.user);
+					// If the currently configured userId is default or empty, set it to the logged in user's ID
+					const currentUserId = localStorage.getItem('buzz_user_id');
+					if (!currentUserId || currentUserId === 'user-123') {
+						setUserId(res.user.id);
+						setConfig(undefined, undefined, res.user.id);
+					}
+				}
+			})
+			.catch(() => {});
 	}, []);
 
 	const fetchAPIKeys = async (appId: string) => {
@@ -180,7 +196,21 @@ export default function SettingsPage() {
 							</div>
 
 							<div>
-								<Label htmlFor="userId">User ID</Label>
+								<div className="flex items-center justify-between">
+									<Label htmlFor="userId">User ID</Label>
+									{currentUser && userId !== currentUser.id && (
+										<button
+											type="button"
+											onClick={() => {
+												setUserId(currentUser.id);
+												setConfig(undefined, undefined, currentUser.id);
+											}}
+											className="text-[0.7rem] text-[var(--accent)] hover:underline flex items-center gap-1 font-semibold"
+										>
+											<RefreshCw size={10} /> Reset to my User ID
+										</button>
+									)}
+								</div>
 								<Input
 									id="userId"
 									value={userId}

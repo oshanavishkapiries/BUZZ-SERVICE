@@ -42,6 +42,7 @@ func (p *InAppProvider) Send(ctx context.Context, n *domain.Notification) error 
 	// 1. Create inbox entry
 	inboxEntry := &domain.InboxEntry{
 		ID:             uuid.New(),
+		ApplicationID:  n.ApplicationID,
 		NotificationID: &n.ID,
 		UserID:         userID,
 		Title:          derefString(n.Subject),
