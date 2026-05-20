@@ -67,6 +67,13 @@ func (p *SMTPProvider) SendEmail(ctx context.Context, msg *EmailMessage) error {
 		headers[key] = value
 	}
 
+	boundary := "boundary_buzz_service"
+	if msg.HTMLBody != "" {
+		headers["Content-Type"] = fmt.Sprintf("multipart/alternative; boundary=\"%s\"", boundary)
+	} else {
+		headers["Content-Type"] = "text/plain; charset=UTF-8"
+	}
+
 	// Build message body
 	var message strings.Builder
 	for key, value := range headers {
@@ -75,9 +82,6 @@ func (p *SMTPProvider) SendEmail(ctx context.Context, msg *EmailMessage) error {
 
 	// Multipart message for text and HTML
 	if msg.HTMLBody != "" {
-		boundary := "boundary_buzz_service"
-		headers["Content-Type"] = fmt.Sprintf("multipart/alternative; boundary=\"%s\"", boundary)
-
 		message.WriteString("\r\n")
 		message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
 		message.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
@@ -93,7 +97,6 @@ func (p *SMTPProvider) SendEmail(ctx context.Context, msg *EmailMessage) error {
 
 		message.WriteString(fmt.Sprintf("--%s--", boundary))
 	} else {
-		headers["Content-Type"] = "text/plain; charset=UTF-8"
 		message.WriteString("\r\n")
 		message.WriteString(msg.TextBody)
 	}

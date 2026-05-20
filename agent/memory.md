@@ -62,6 +62,8 @@
 | 2026-05-07 | Agent workflow initialized | `agent/`, `AGENT.md` | Created memory-driven agent workflow |
 | 2026-05-20 | RBAC and Workspace Members | `api/*`, `client/*` | Disabled public signup, added global endpoints exception in AuthMiddleware, added system owner role bypass, created User management UI, documented roles in README, added Copy Key option in Settings, reduced login card border radius, and updated developer docs page. |
 | 2026-05-20 | Cascade Delete Fix & Switcher UI | `internal/api/users.go`, `internal/store/users_and_applications.go`, `client/src/components/Sidebar.tsx`, `client/src/app/page.tsx` | Added application ownership transfer to the deleting admin inside DeleteUser, added Create Workspace button to Sidebar for empty workspaces, and added a warning banner to Dashboard when no active workspace is selected. |
+| 2026-05-20 | SMTP Email Content-Type Fix | `internal/provider/email/smtp.go` | Moved Content-Type and boundary configuration before building headers list to prevent raw multipart MIME layout display in email clients. |
+| 2026-05-20 | HTML Email Auto-Detection | `internal/provider/email/types.go` | Added auto-detection for HTML content to prevent the template rendering engine from escaping HTML tags (like '<' to '&lt;') if the body is already HTML. |
 
 ---
 

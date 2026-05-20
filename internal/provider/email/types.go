@@ -3,6 +3,7 @@ package email
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/elight/buzz-service/internal/domain"
@@ -66,20 +67,41 @@ func NotificationToEmailMessage(n *domain.Notification, cfg EmailConfig) (*Email
 		subject = *n.Subject
 	}
 
-	htmlBody := renderHTMLFromText(n.Body)
+	var htmlBody string
+	var textBody string
+
+	if isHTML(n.Body) {
+		htmlBody = n.Body
+		textBody = stripHTML(n.Body)
+	} else {
+		htmlBody = renderHTMLFromText(n.Body)
+		textBody = n.Body
+	}
 
 	return &EmailMessage{
 		From:     cfg.FromEmail,
 		FromName: cfg.FromName,
 		To:       []string{toEmail},
 		Subject:  subject,
-		TextBody: n.Body,
+		TextBody: textBody,
 		HTMLBody: htmlBody,
 		Tags: map[string]string{
 			"notification_id": n.ID.String(),
 			"channel":         string(n.Channel),
 		},
 	}, nil
+}
+
+// isHTML checks if the body contains HTML tags
+func isHTML(text string) bool {
+	t := strings.TrimSpace(strings.ToLower(text))
+	return strings.HasPrefix(t, "<!doctype html") || strings.HasPrefix(t, "<html") || strings.Contains(t, "<body") || strings.Contains(t, "</html>")
+}
+
+// stripHTML removes HTML tags for plain text fallback
+func stripHTML(html string) string {
+	r := regexp.MustCompile("<[^>]*>")
+	return strings.TrimSpace(r.ReplaceAllString(html, ""))
 }
 
 // renderHTMLFromText converts plain text to basic HTML
