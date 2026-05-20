@@ -29,6 +29,11 @@ func NewDeviceHandler(st *store.PostgresStore) *DeviceHandler {
 // @Security     Bearer
 // @Router       /api/v1/devices/register [post]
 func (h *DeviceHandler) RegisterDevice(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	var req struct {
 		UserID   string `json:"user_id"`
 		Token    string `json:"token"`
@@ -57,11 +62,12 @@ func (h *DeviceHandler) RegisterDevice(c *fiber.Ctx) error {
 	}
 
 	deviceToken := &store.DeviceToken{
-		ID:       uuid.New(),
-		UserID:   req.UserID,
-		Token:    req.Token,
-		Platform: req.Platform,
-		Active:   true,
+		ID:            uuid.New(),
+		ApplicationID: appID,
+		UserID:        req.UserID,
+		Token:         req.Token,
+		Platform:      req.Platform,
+		Active:        true,
 	}
 
 	if err := h.store.UpsertDeviceToken(c.Context(), deviceToken); err != nil {
@@ -88,6 +94,11 @@ func (h *DeviceHandler) RegisterDevice(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/devices [get]
 func (h *DeviceHandler) ListUserDevices(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	userID := c.Query("user_id")
 	if userID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -95,7 +106,7 @@ func (h *DeviceHandler) ListUserDevices(c *fiber.Ctx) error {
 		})
 	}
 
-	tokens, err := h.store.GetUserDeviceTokens(c.Context(), userID)
+	tokens, err := h.store.GetUserDeviceTokens(c.Context(), appID, userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to fetch devices",
@@ -125,6 +136,11 @@ func (h *DeviceHandler) ListUserDevices(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/devices/{token} [delete]
 func (h *DeviceHandler) UnregisterDevice(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	token := c.Params("token")
 	if token == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -132,7 +148,7 @@ func (h *DeviceHandler) UnregisterDevice(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.store.DeactivateDeviceToken(c.Context(), token); err != nil {
+	if err := h.store.DeactivateDeviceToken(c.Context(), appID, token); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to unregister device",
 		})

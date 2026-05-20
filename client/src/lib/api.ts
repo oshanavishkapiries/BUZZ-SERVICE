@@ -6,8 +6,21 @@ class APIClient {
     const { apiKey, userId } = getConfig();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
     };
+
+    // Check if we have a JWT token stored
+    const jwtToken = typeof window !== 'undefined' ? localStorage.getItem('buzz_jwt_token') : null;
+    const activeAppId = typeof window !== 'undefined' ? localStorage.getItem('buzz_active_app_id') : null;
+
+    if (jwtToken) {
+      headers['Authorization'] = `Bearer ${jwtToken}`;
+      if (activeAppId) {
+        headers['X-Application-ID'] = activeAppId;
+      }
+    } else {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
     if (includeUserId) {
       headers['X-User-ID'] = userId;
     }
@@ -249,6 +262,65 @@ class APIClient {
       '/api/v1/notifications/matrix'
     );
     return result.matrix;
+  }
+
+  // Auth Methods
+  async login(req: Types.LoginRequest): Promise<{ token: string; user: Types.User }> {
+    return this.request<{ token: string; user: Types.User }>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(req),
+      noUserID: true,
+    });
+  }
+
+  async signup(req: { email: string; password: string; name: string }): Promise<{ token: string; user: Types.User; application: { id: string; name: string } }> {
+    return this.request<{ token: string; user: Types.User; application: { id: string; name: string } }>('/api/v1/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(req),
+      noUserID: true,
+    });
+  }
+
+  async getMe(): Promise<{ user: Types.User }> {
+    return this.request<{ user: Types.User }>('/api/v1/auth/me', {
+      noUserID: true,
+    });
+  }
+
+  // Application Methods
+  async listApplications(): Promise<{ applications: Types.Application[] }> {
+    return this.request<{ applications: Types.Application[] }>('/api/v1/applications', {
+      noUserID: true,
+    });
+  }
+
+  async createApplication(req: { name: string; description?: string }): Promise<{ application: Types.Application }> {
+    return this.request<{ application: Types.Application }>('/api/v1/applications', {
+      method: 'POST',
+      body: JSON.stringify(req),
+      noUserID: true,
+    });
+  }
+
+  async listAPIKeys(appId: string): Promise<{ api_keys: Types.APIKey[] }> {
+    return this.request<{ api_keys: Types.APIKey[] }>(`/api/v1/applications/${appId}/keys`, {
+      noUserID: true,
+    });
+  }
+
+  async createAPIKey(appId: string, req: { name: string; description?: string; environment?: string; scopes?: string[] }): Promise<{ raw_key: string; api_key: Types.APIKey }> {
+    return this.request<{ raw_key: string; api_key: Types.APIKey }>(`/api/v1/applications/${appId}/keys`, {
+      method: 'POST',
+      body: JSON.stringify(req),
+      noUserID: true,
+    });
+  }
+
+  async deleteAPIKey(appId: string, keyId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/v1/applications/${appId}/keys/${keyId}`, {
+      method: 'DELETE',
+      noUserID: true,
+    });
   }
 }
 

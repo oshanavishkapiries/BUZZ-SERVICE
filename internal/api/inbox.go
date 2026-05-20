@@ -31,6 +31,11 @@ func NewInboxHandler(st *store.PostgresStore) *InboxHandler {
 // @Security     Bearer
 // @Router       /api/v1/inbox [get]
 func (h *InboxHandler) GetInbox(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -43,10 +48,11 @@ func (h *InboxHandler) GetInbox(c *fiber.Ctx) error {
 	offset := c.QueryInt("offset", 0)
 
 	filters := store.InboxFilters{
-		UserID:     userID,
-		UnreadOnly: unreadOnly,
-		Limit:      limit,
-		Offset:     offset,
+		ApplicationID: appID,
+		UserID:        userID,
+		UnreadOnly:    unreadOnly,
+		Limit:         limit,
+		Offset:        offset,
 	}
 
 	entries, total, err := h.st.GetInbox(c.Context(), filters)
@@ -56,7 +62,7 @@ func (h *InboxHandler) GetInbox(c *fiber.Ctx) error {
 		})
 	}
 
-	unreadCount, err := h.st.GetUnreadCount(c.Context(), userID)
+	unreadCount, err := h.st.GetUnreadCount(c.Context(), appID, userID)
 	if err != nil {
 		unreadCount = 0
 	}
@@ -82,6 +88,11 @@ func (h *InboxHandler) GetInbox(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/inbox/{id}/read [patch]
 func (h *InboxHandler) MarkAsRead(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -97,7 +108,7 @@ func (h *InboxHandler) MarkAsRead(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.st.MarkInboxAsRead(c.Context(), id, userID); err != nil {
+	if err := h.st.MarkInboxAsRead(c.Context(), appID, id, userID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to mark as read",
 		})
@@ -118,6 +129,11 @@ func (h *InboxHandler) MarkAsRead(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/inbox/read-all [post]
 func (h *InboxHandler) MarkAllAsRead(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -125,7 +141,7 @@ func (h *InboxHandler) MarkAllAsRead(c *fiber.Ctx) error {
 		})
 	}
 
-	count, err := h.st.MarkAllInboxAsRead(c.Context(), userID)
+	count, err := h.st.MarkAllInboxAsRead(c.Context(), appID, userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to mark all as read",
@@ -150,6 +166,11 @@ func (h *InboxHandler) MarkAllAsRead(c *fiber.Ctx) error {
 // @Security     Bearer
 // @Router       /api/v1/inbox/{id} [delete]
 func (h *InboxHandler) DeleteNotification(c *fiber.Ctx) error {
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -165,7 +186,7 @@ func (h *InboxHandler) DeleteNotification(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.st.DeleteInboxEntry(c.Context(), id, userID); err != nil {
+	if err := h.st.DeleteInboxEntry(c.Context(), appID, id, userID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to delete notification",
 		})

@@ -24,20 +24,19 @@ func NewNotificationRepository(db *sql.DB) *NotificationRepository {
 func (r *NotificationRepository) Create(ctx context.Context, notification *domain.Notification) error {
 	query := `
 		INSERT INTO notifications (
-			id, batch_id, channel, priority, recipient, subject, body, html_body,
+			id, application_id, batch_id, channel, priority, recipient, subject, body, html_body,
 			template_id, variables, status, provider, provider_message_id, provider_response,
 			queued_at, sent_at, delivered_at, failed_at, retry_count, max_retries,
 			next_retry_at, error_message, error_code, metadata, created_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-			$15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
 		) RETURNING created_at, updated_at
 	`
 
 	notification.ID = uuid.New()
 
 	err := r.db.QueryRowContext(ctx, query,
-		notification.ID, notification.BatchID, notification.Channel, notification.Priority,
+		notification.ID, notification.ApplicationID, notification.BatchID, notification.Channel, notification.Priority,
 		notification.Recipient, notification.Subject, notification.Body, notification.HTMLBody,
 		notification.TemplateID, notification.Variables, notification.Status, notification.Provider,
 		notification.ProviderMessageID, notification.ProviderResponse, notification.QueuedAt,
@@ -53,21 +52,21 @@ func (r *NotificationRepository) Create(ctx context.Context, notification *domai
 	return nil
 }
 
-// GetByID retrieves a notification by ID
-func (r *NotificationRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Notification, error) {
+// GetByID retrieves a notification by ID and application ID
+func (r *NotificationRepository) GetByID(ctx context.Context, appID uuid.UUID, id uuid.UUID) (*domain.Notification, error) {
 	query := `
-		SELECT id, batch_id, channel, priority, recipient, subject, body, html_body,
+		SELECT id, application_id, batch_id, channel, priority, recipient, subject, body, html_body,
 			template_id, variables, status, provider, provider_message_id, provider_response,
 			queued_at, sent_at, delivered_at, failed_at, retry_count, max_retries,
 			next_retry_at, error_message, error_code, metadata, created_at, updated_at,
 			created_by, deleted_at
 		FROM notifications
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE id = $1 AND application_id = $2 AND deleted_at IS NULL
 	`
 
 	notification := &domain.Notification{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&notification.ID, &notification.BatchID, &notification.Channel, &notification.Priority,
+	err := r.db.QueryRowContext(ctx, query, id, appID).Scan(
+		&notification.ID, &notification.ApplicationID, &notification.BatchID, &notification.Channel, &notification.Priority,
 		&notification.Recipient, &notification.Subject, &notification.Body, &notification.HTMLBody,
 		&notification.TemplateID, &notification.Variables, &notification.Status, &notification.Provider,
 		&notification.ProviderMessageID, &notification.ProviderResponse, &notification.QueuedAt,
@@ -95,7 +94,7 @@ func (r *NotificationRepository) Update(ctx context.Context, notification *domai
 			queued_at = $5, sent_at = $6, delivered_at = $7, failed_at = $8,
 			retry_count = $9, next_retry_at = $10, error_message = $11, error_code = $12,
 			metadata = $13, updated_at = NOW()
-		WHERE id = $14 AND deleted_at IS NULL
+		WHERE id = $14 AND application_id = $15 AND deleted_at IS NULL
 		RETURNING updated_at
 	`
 
@@ -104,7 +103,7 @@ func (r *NotificationRepository) Update(ctx context.Context, notification *domai
 		notification.ProviderResponse, notification.QueuedAt, notification.SentAt,
 		notification.DeliveredAt, notification.FailedAt, notification.RetryCount,
 		notification.NextRetryAt, notification.ErrorMessage, notification.ErrorCode,
-		notification.Metadata, notification.ID,
+		notification.Metadata, notification.ID, notification.ApplicationID,
 	).Scan(&notification.UpdatedAt)
 
 	if err == sql.ErrNoRows {
@@ -118,14 +117,14 @@ func (r *NotificationRepository) Update(ctx context.Context, notification *domai
 }
 
 // UpdateStatus updates only the status of a notification
-func (r *NotificationRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.NotificationStatus) error {
+func (r *NotificationRepository) UpdateStatus(ctx context.Context, appID uuid.UUID, id uuid.UUID, status domain.NotificationStatus) error {
 	query := `
 		UPDATE notifications SET
 			status = $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL
+		WHERE id = $2 AND application_id = $3 AND deleted_at IS NULL
 	`
 
-	result, err := r.db.ExecContext(ctx, query, status, id)
+	result, err := r.db.ExecContext(ctx, query, status, id, appID)
 	if err != nil {
 		return fmt.Errorf("failed to update notification status: %w", err)
 	}
@@ -141,20 +140,20 @@ func (r *NotificationRepository) UpdateStatus(ctx context.Context, id uuid.UUID,
 	return nil
 }
 
-// List retrieves notifications with optional filters
-func (r *NotificationRepository) List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*domain.Notification, error) {
+// List retrieves notifications with optional filters for a specific application
+func (r *NotificationRepository) List(ctx context.Context, appID uuid.UUID, filters map[string]interface{}, limit, offset int) ([]*domain.Notification, error) {
 	query := `
-		SELECT id, batch_id, channel, priority, recipient, subject, body, html_body,
+		SELECT id, application_id, batch_id, channel, priority, recipient, subject, body, html_body,
 			template_id, variables, status, provider, provider_message_id, provider_response,
 			queued_at, sent_at, delivered_at, failed_at, retry_count, max_retries,
 			next_retry_at, error_message, error_code, metadata, created_at, updated_at,
 			created_by, deleted_at
 		FROM notifications
-		WHERE deleted_at IS NULL
+		WHERE application_id = $1 AND deleted_at IS NULL
 	`
 
-	args := []interface{}{}
-	argIndex := 1
+	args := []interface{}{appID}
+	argIndex := 2
 
 	// Add filters
 	if batchID, ok := filters["batch_id"].(uuid.UUID); ok {
@@ -195,7 +194,7 @@ func (r *NotificationRepository) List(ctx context.Context, filters map[string]in
 	for rows.Next() {
 		notification := &domain.Notification{}
 		err := rows.Scan(
-			&notification.ID, &notification.BatchID, &notification.Channel, &notification.Priority,
+			&notification.ID, &notification.ApplicationID, &notification.BatchID, &notification.Channel, &notification.Priority,
 			&notification.Recipient, &notification.Subject, &notification.Body, &notification.HTMLBody,
 			&notification.TemplateID, &notification.Variables, &notification.Status, &notification.Provider,
 			&notification.ProviderMessageID, &notification.ProviderResponse, &notification.QueuedAt,
@@ -217,10 +216,10 @@ func (r *NotificationRepository) List(ctx context.Context, filters map[string]in
 	return notifications, nil
 }
 
-// GetPendingRetries retrieves notifications that are ready for retry
+// GetPendingRetries retrieves notifications that are ready for retry (runs globally for the worker)
 func (r *NotificationRepository) GetPendingRetries(ctx context.Context, limit int) ([]*domain.Notification, error) {
 	query := `
-		SELECT id, batch_id, channel, priority, recipient, subject, body, html_body,
+		SELECT id, application_id, batch_id, channel, priority, recipient, subject, body, html_body,
 			template_id, variables, status, provider, provider_message_id, provider_response,
 			queued_at, sent_at, delivered_at, failed_at, retry_count, max_retries,
 			next_retry_at, error_message, error_code, metadata, created_at, updated_at,
@@ -245,7 +244,7 @@ func (r *NotificationRepository) GetPendingRetries(ctx context.Context, limit in
 	for rows.Next() {
 		notification := &domain.Notification{}
 		err := rows.Scan(
-			&notification.ID, &notification.BatchID, &notification.Channel, &notification.Priority,
+			&notification.ID, &notification.ApplicationID, &notification.BatchID, &notification.Channel, &notification.Priority,
 			&notification.Recipient, &notification.Subject, &notification.Body, &notification.HTMLBody,
 			&notification.TemplateID, &notification.Variables, &notification.Status, &notification.Provider,
 			&notification.ProviderMessageID, &notification.ProviderResponse, &notification.QueuedAt,
@@ -270,16 +269,16 @@ type MatrixCount struct {
 	Count   int64
 }
 
-// GetMatrix returns counts grouped by channel and status in a single query
-func (r *NotificationRepository) GetMatrix(ctx context.Context) ([]MatrixCount, error) {
+// GetMatrix returns counts grouped by channel and status in a single query for a specific application
+func (r *NotificationRepository) GetMatrix(ctx context.Context, appID uuid.UUID) ([]MatrixCount, error) {
 	query := `
 		SELECT channel, status, COUNT(*) AS count
 		FROM notifications
-		WHERE deleted_at IS NULL
+		WHERE application_id = $1 AND deleted_at IS NULL
 		GROUP BY channel, status
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, appID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get notification matrix: %w", err)
 	}
@@ -297,14 +296,14 @@ func (r *NotificationRepository) GetMatrix(ctx context.Context) ([]MatrixCount, 
 }
 
 // Delete soft deletes a notification
-func (r *NotificationRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *NotificationRepository) Delete(ctx context.Context, appID uuid.UUID, id uuid.UUID) error {
 	query := `
 		UPDATE notifications SET
 			deleted_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE id = $1 AND application_id = $2 AND deleted_at IS NULL
 	`
 
-	result, err := r.db.ExecContext(ctx, query, id)
+	result, err := r.db.ExecContext(ctx, query, id, appID)
 	if err != nil {
 		return fmt.Errorf("failed to delete notification: %w", err)
 	}

@@ -262,10 +262,10 @@ func (r *InboxRepository) DeleteExpired(ctx context.Context) (int64, error) {
 func (s *PostgresStore) CreateInboxEntry(ctx context.Context, entry *domain.InboxEntry) error {
 	query := `
 		INSERT INTO inbox (
-			id, user_id, notification_id, title, body, type, action_url,
+			id, application_id, user_id, notification_id, title, body, type, action_url,
 			action_text, icon_url, image_url, is_read, is_archived, expires_at, metadata
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
 		) RETURNING created_at
 	`
 
@@ -274,7 +274,7 @@ func (s *PostgresStore) CreateInboxEntry(ctx context.Context, entry *domain.Inbo
 	}
 
 	err := s.db.QueryRowContext(ctx, query,
-		entry.ID, entry.UserID, entry.NotificationID, entry.Title, entry.Body,
+		entry.ID, entry.ApplicationID, entry.UserID, entry.NotificationID, entry.Title, entry.Body,
 		entry.Type, entry.ActionURL, entry.ActionText, entry.IconURL, entry.ImageURL,
 		entry.IsRead, entry.IsArchived, entry.ExpiresAt, entry.Metadata,
 	).Scan(&entry.CreatedAt)
@@ -288,23 +288,24 @@ func (s *PostgresStore) CreateInboxEntry(ctx context.Context, entry *domain.Inbo
 
 // GetInbox retrieves inbox entries for a user
 type InboxFilters struct {
-	UserID     string
-	UnreadOnly bool
-	Limit      int
-	Offset     int
+	ApplicationID uuid.UUID
+	UserID        string
+	UnreadOnly    bool
+	Limit         int
+	Offset        int
 }
 
 func (s *PostgresStore) GetInbox(ctx context.Context, filters InboxFilters) ([]domain.InboxEntry, int, error) {
 	query := `
-		SELECT id, user_id, notification_id, title, body, type, action_url,
+		SELECT id, application_id, user_id, notification_id, title, body, type, action_url,
 			action_text, icon_url, image_url, is_read, is_archived, read_at,
 			archived_at, expires_at, metadata, created_at, updated_at, deleted_at
 		FROM inbox
-		WHERE user_id = $1 AND deleted_at IS NULL
+		WHERE user_id = $1 AND application_id = $2 AND deleted_at IS NULL
 	`
 
-	args := []interface{}{filters.UserID}
-	argCount := 1
+	args := []interface{}{filters.UserID, filters.ApplicationID}
+	argCount := 2
 
 	if filters.UnreadOnly {
 		query += " AND is_read = false"
@@ -334,7 +335,7 @@ func (s *PostgresStore) GetInbox(ctx context.Context, filters InboxFilters) ([]d
 		var entry domain.InboxEntry
 		var readAt, archivedAt, expiresAt, deletedAt sql.NullTime
 		err := rows.Scan(
-			&entry.ID, &entry.UserID, &entry.NotificationID, &entry.Title, &entry.Body,
+			&entry.ID, &entry.ApplicationID, &entry.UserID, &entry.NotificationID, &entry.Title, &entry.Body,
 			&entry.Type, &entry.ActionURL, &entry.ActionText, &entry.IconURL, &entry.ImageURL,
 			&entry.IsRead, &entry.IsArchived, &readAt, &archivedAt, &expiresAt,
 			&entry.Metadata, &entry.CreatedAt, &entry.UpdatedAt, &deletedAt,
@@ -358,13 +359,13 @@ func (s *PostgresStore) GetInbox(ctx context.Context, filters InboxFilters) ([]d
 	}
 
 	// Get total count
-	countQuery := "SELECT COUNT(*) FROM inbox WHERE user_id = $1 AND deleted_at IS NULL"
+	countQuery := "SELECT COUNT(*) FROM inbox WHERE user_id = $1 AND application_id = $2 AND deleted_at IS NULL"
 	if filters.UnreadOnly {
 		countQuery += " AND is_read = false"
 	}
 
 	var total int
-	err = s.db.QueryRowContext(ctx, countQuery, filters.UserID).Scan(&total)
+	err = s.db.QueryRowContext(ctx, countQuery, filters.UserID, filters.ApplicationID).Scan(&total)
 	if err != nil {
 		return entries, 0, fmt.Errorf("failed to get total count: %w", err)
 	}
@@ -372,16 +373,16 @@ func (s *PostgresStore) GetInbox(ctx context.Context, filters InboxFilters) ([]d
 	return entries, total, nil
 }
 
-// GetUnreadCount returns the count of unread messages for a user
-func (s *PostgresStore) GetUnreadCount(ctx context.Context, userID string) (int, error) {
+// GetUnreadCount returns the count of unread messages for a user within an application
+func (s *PostgresStore) GetUnreadCount(ctx context.Context, appID uuid.UUID, userID string) (int, error) {
 	query := `
 		SELECT COUNT(*)
 		FROM inbox
-		WHERE user_id = $1 AND is_read = false AND is_archived = false AND deleted_at IS NULL
+		WHERE user_id = $1 AND application_id = $2 AND is_read = false AND is_archived = false AND deleted_at IS NULL
 	`
 
 	var count int
-	err := s.db.QueryRowContext(ctx, query, userID).Scan(&count)
+	err := s.db.QueryRowContext(ctx, query, userID, appID).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get unread count: %w", err)
 	}
@@ -389,15 +390,15 @@ func (s *PostgresStore) GetUnreadCount(ctx context.Context, userID string) (int,
 	return count, nil
 }
 
-// MarkInboxAsRead marks an inbox entry as read
-func (s *PostgresStore) MarkInboxAsRead(ctx context.Context, id uuid.UUID, userID string) error {
+// MarkInboxAsRead marks an inbox entry as read within an application
+func (s *PostgresStore) MarkInboxAsRead(ctx context.Context, appID uuid.UUID, id uuid.UUID, userID string) error {
 	query := `
 		UPDATE inbox
 		SET is_read = true, read_at = NOW(), updated_at = NOW()
-		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+		WHERE id = $1 AND user_id = $2 AND application_id = $3 AND deleted_at IS NULL
 	`
 
-	result, err := s.db.ExecContext(ctx, query, id, userID)
+	result, err := s.db.ExecContext(ctx, query, id, userID, appID)
 	if err != nil {
 		return fmt.Errorf("failed to mark as read: %w", err)
 	}
@@ -413,15 +414,15 @@ func (s *PostgresStore) MarkInboxAsRead(ctx context.Context, id uuid.UUID, userI
 	return nil
 }
 
-// MarkAllInboxAsRead marks all inbox entries for a user as read
-func (s *PostgresStore) MarkAllInboxAsRead(ctx context.Context, userID string) (int, error) {
+// MarkAllInboxAsRead marks all inbox entries for a user as read within an application
+func (s *PostgresStore) MarkAllInboxAsRead(ctx context.Context, appID uuid.UUID, userID string) (int, error) {
 	query := `
 		UPDATE inbox
 		SET is_read = true, read_at = NOW(), updated_at = NOW()
-		WHERE user_id = $1 AND is_read = false AND deleted_at IS NULL
+		WHERE user_id = $1 AND application_id = $2 AND is_read = false AND deleted_at IS NULL
 	`
 
-	result, err := s.db.ExecContext(ctx, query, userID)
+	result, err := s.db.ExecContext(ctx, query, userID, appID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to mark all as read: %w", err)
 	}
@@ -430,15 +431,15 @@ func (s *PostgresStore) MarkAllInboxAsRead(ctx context.Context, userID string) (
 	return int(count), err
 }
 
-// DeleteInboxEntry deletes an inbox entry
-func (s *PostgresStore) DeleteInboxEntry(ctx context.Context, id uuid.UUID, userID string) error {
+// DeleteInboxEntry deletes an inbox entry within an application
+func (s *PostgresStore) DeleteInboxEntry(ctx context.Context, appID uuid.UUID, id uuid.UUID, userID string) error {
 	query := `
 		UPDATE inbox
 		SET deleted_at = NOW()
-		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+		WHERE id = $1 AND user_id = $2 AND application_id = $3 AND deleted_at IS NULL
 	`
 
-	result, err := s.db.ExecContext(ctx, query, id, userID)
+	result, err := s.db.ExecContext(ctx, query, id, userID, appID)
 	if err != nil {
 		return fmt.Errorf("failed to delete inbox entry: %w", err)
 	}

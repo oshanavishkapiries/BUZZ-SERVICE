@@ -10,6 +10,7 @@ import (
 	"github.com/elight/buzz-service/internal/provider/push"
 	"github.com/elight/buzz-service/internal/provider/sms"
 	"github.com/elight/buzz-service/internal/store"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -19,8 +20,9 @@ type Registry struct {
 	dbStore     *store.PostgresStore
 	redisClient *redis.Client
 	mu          sync.RWMutex
-	byName      map[string]Provider             // provider config name → live instance
-	byChannel   map[domain.Channel][]namedEntry // ordered: defaults first
+	byName      map[uuid.UUID]map[string]Provider             // appID → name → live instance
+	byChannel   map[uuid.UUID]map[domain.Channel][]namedEntry // appID → channel → ordered
+	fixed       map[domain.Channel]Provider
 }
 
 type namedEntry struct {
@@ -34,6 +36,9 @@ func NewRegistry(ctx context.Context, dbStore *store.PostgresStore, redisClient 
 	r := &Registry{
 		dbStore:     dbStore,
 		redisClient: redisClient,
+		byName:      make(map[uuid.UUID]map[string]Provider),
+		byChannel:   make(map[uuid.UUID]map[domain.Channel][]namedEntry),
+		fixed:       make(map[domain.Channel]Provider),
 	}
 	if err := r.Reload(ctx); err != nil {
 		return nil, err
@@ -43,13 +48,13 @@ func NewRegistry(ctx context.Context, dbStore *store.PostgresStore, redisClient 
 
 // Reload rebuilds the in-memory cache from the database. Safe to call at runtime.
 func (r *Registry) Reload(ctx context.Context) error {
-	configs, err := r.dbStore.ListProviderConfigs(ctx)
+	configs, err := r.dbStore.ListAllProviderConfigs(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to load provider configs: %w", err)
 	}
 
-	byName := make(map[string]Provider)
-	byChannel := make(map[domain.Channel][]namedEntry)
+	byName := make(map[uuid.UUID]map[string]Provider)
+	byChannel := make(map[uuid.UUID]map[domain.Channel][]namedEntry)
 
 	for _, pc := range configs {
 		if !pc.IsActive {
@@ -61,8 +66,14 @@ func (r *Registry) Reload(ctx context.Context) error {
 			fmt.Printf("[provider.Registry] skipping %q: %v\n", pc.Name, err)
 			continue
 		}
-		byName[pc.Name] = p
-		byChannel[pc.Channel] = append(byChannel[pc.Channel], namedEntry{
+
+		if _, ok := byName[pc.ApplicationID]; !ok {
+			byName[pc.ApplicationID] = make(map[string]Provider)
+			byChannel[pc.ApplicationID] = make(map[domain.Channel][]namedEntry)
+		}
+
+		byName[pc.ApplicationID][pc.Name] = p
+		byChannel[pc.ApplicationID][pc.Channel] = append(byChannel[pc.ApplicationID][pc.Channel], namedEntry{
 			name:      pc.Name,
 			isDefault: pc.IsDefault,
 			provider:  p,
@@ -70,17 +81,19 @@ func (r *Registry) Reload(ctx context.Context) error {
 	}
 
 	// Sort so defaults come first within each channel
-	for ch := range byChannel {
-		entries := byChannel[ch]
-		sorted := make([]namedEntry, 0, len(entries))
-		for _, e := range entries {
-			if e.isDefault {
-				sorted = append([]namedEntry{e}, sorted...)
-			} else {
-				sorted = append(sorted, e)
+	for appID := range byChannel {
+		for ch := range byChannel[appID] {
+			entries := byChannel[appID][ch]
+			sorted := make([]namedEntry, 0, len(entries))
+			for _, e := range entries {
+				if e.isDefault {
+					sorted = append([]namedEntry{e}, sorted...)
+				} else {
+					sorted = append(sorted, e)
+				}
 			}
+			byChannel[appID][ch] = sorted
 		}
-		byChannel[ch] = sorted
 	}
 
 	r.mu.Lock()
@@ -93,21 +106,36 @@ func (r *Registry) Reload(ctx context.Context) error {
 // Resolve returns the provider to use for a notification.
 //   - providerName non-empty → look up by name
 //   - providerName empty    → return the default (or first active) for that channel
-func (r *Registry) Resolve(channel domain.Channel, providerName string) (Provider, error) {
+func (r *Registry) Resolve(appID uuid.UUID, channel domain.Channel, providerName string) (Provider, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	// Fallback to fixed (e.g. in-app) first
+	if channel == domain.ChannelInApp {
+		if p, ok := r.fixed[channel]; ok {
+			return p, nil
+		}
+	}
+
 	if providerName != "" {
-		p, ok := r.byName[providerName]
+		appProviders, ok := r.byName[appID]
 		if !ok {
-			return nil, fmt.Errorf("provider %q not found or inactive", providerName)
+			return nil, fmt.Errorf("provider %q not found or inactive for app %s", providerName, appID)
+		}
+		p, ok := appProviders[providerName]
+		if !ok {
+			return nil, fmt.Errorf("provider %q not found or inactive for app %s", providerName, appID)
 		}
 		return p, nil
 	}
 
-	entries := r.byChannel[channel]
+	appChannels, ok := r.byChannel[appID]
+	if !ok {
+		return nil, fmt.Errorf("no active provider configured for channel %q for app %s", channel, appID)
+	}
+	entries := appChannels[channel]
 	if len(entries) == 0 {
-		return nil, fmt.Errorf("no active provider configured for channel %q", channel)
+		return nil, fmt.Errorf("no active provider configured for channel %q for app %s", channel, appID)
 	}
 	return entries[0].provider, nil
 }
@@ -117,17 +145,28 @@ func (r *Registry) Resolve(channel domain.Channel, providerName string) (Provide
 func (r *Registry) RegisterFixed(channel domain.Channel, p Provider) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	name := "__fixed_" + string(channel)
-	r.byName[name] = p
-	// Prepend so it is the first match for the channel
-	r.byChannel[channel] = append([]namedEntry{{name: name, isDefault: true, provider: p}}, r.byChannel[channel]...)
+	if r.fixed == nil {
+		r.fixed = make(map[domain.Channel]Provider)
+	}
+	r.fixed[channel] = p
 }
 
 // HasAny reports whether at least one active provider exists for the channel.
-func (r *Registry) HasAny(channel domain.Channel) bool {
+func (r *Registry) HasAny(appID uuid.UUID, channel domain.Channel) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return len(r.byChannel[channel]) > 0
+
+	if channel == domain.ChannelInApp {
+		if _, ok := r.fixed[channel]; ok {
+			return true
+		}
+	}
+
+	appChannels, ok := r.byChannel[appID]
+	if !ok {
+		return false
+	}
+	return len(appChannels[channel]) > 0
 }
 
 // buildProvider constructs a live provider from a stored ProviderConfig.

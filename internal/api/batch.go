@@ -41,6 +41,10 @@ func NewBatchHandler(s *store.PostgresStore, producer *queue.Producer) *BatchHan
 // @Router       /api/v1/batches/send [post]
 func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 	ctx := c.Context()
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
 
 	var req struct {
 		DatasourceName  string                 `json:"datasource_name"`
@@ -68,7 +72,7 @@ func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 
 	// Check for duplicate if idempotency key provided
 	if req.IdempotencyKey != "" {
-		existing, err := h.store.GetBatchByIdempotencyKey(ctx, req.IdempotencyKey)
+		existing, err := h.store.GetBatchByIdempotencyKey(ctx, appID, req.IdempotencyKey)
 		if err == nil && existing != nil {
 			// Idempotent response: return existing batch ID
 			return c.Status(http.StatusOK).JSON(fiber.Map{
@@ -79,7 +83,7 @@ func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 	}
 
 	// Fetch datasource to get ID
-	ds, err := h.store.GetDatasourceByName(ctx, req.DatasourceName)
+	ds, err := h.store.GetDatasourceByName(ctx, appID, req.DatasourceName)
 	if err != nil {
 		if err == domain.ErrDatasourceNotFound {
 			return c.Status(http.StatusNotFound).JSON(fiber.Map{
@@ -94,6 +98,7 @@ func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 	// Create batch
 	batch := &domain.Batch{
 		ID:              uuid.New(),
+		ApplicationID:   appID,
 		DatasourceID:    &ds.ID,
 		DatasourceName:  req.DatasourceName,
 		EndpointName:    req.EndpointName,
@@ -116,7 +121,7 @@ func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 	}
 
 	// Enqueue batch processing task
-	if err := h.producer.EnqueueBatchProcess(ctx, batch.ID.String()); err != nil {
+	if err := h.producer.EnqueueBatchProcess(ctx, appID.String(), batch.ID.String()); err != nil {
 		// Log error but don't fail the request - batch is created
 		// Could implement a retry mechanism here
 	}
@@ -142,6 +147,10 @@ func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 // @Router       /api/v1/batches/{id} [get]
 func (h *BatchHandler) GetBatchStatus(c *fiber.Ctx) error {
 	ctx := c.Context()
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
 
 	batchID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -150,7 +159,7 @@ func (h *BatchHandler) GetBatchStatus(c *fiber.Ctx) error {
 		})
 	}
 
-	batch, err := h.store.GetBatch(ctx, batchID)
+	batch, err := h.store.GetBatch(ctx, appID, batchID)
 	if err != nil {
 		if err == domain.ErrBatchNotFound {
 			return c.Status(http.StatusNotFound).JSON(fiber.Map{
@@ -189,6 +198,10 @@ func (h *BatchHandler) GetBatchStatus(c *fiber.Ctx) error {
 // @Router       /api/v1/batches [get]
 func (h *BatchHandler) ListBatches(c *fiber.Ctx) error {
 	ctx := c.Context()
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
 
 	status := c.Query("status", "")
 	limit := c.QueryInt("limit", 10)
@@ -198,7 +211,7 @@ func (h *BatchHandler) ListBatches(c *fiber.Ctx) error {
 		limit = 100
 	}
 
-	batches, total, err := h.store.ListBatches(ctx, status, limit, offset)
+	batches, total, err := h.store.ListBatches(ctx, appID, status, limit, offset)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to list batches",

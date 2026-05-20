@@ -28,6 +28,7 @@ type ServerConfig struct {
 	Env          string
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
+	JWTSecret    string
 }
 
 type DatabaseConfig struct {
@@ -119,6 +120,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("ENV", "development")
 	viper.SetDefault("SERVER_READ_TIMEOUT", "10s")
 	viper.SetDefault("SERVER_WRITE_TIMEOUT", "10s")
+	viper.SetDefault("JWT_SECRET", "buzz_jwt_secret_change_me_in_production")
 
 	viper.SetDefault("DB_HOST", "localhost")
 	viper.SetDefault("DB_PORT", 5432)
@@ -196,6 +198,7 @@ func Load() (*Config, error) {
 			Env:          viper.GetString("ENV"),
 			ReadTimeout:  readTimeout,
 			WriteTimeout: writeTimeout,
+			JWTSecret:    viper.GetString("JWT_SECRET"),
 		},
 		Database: DatabaseConfig{
 			Host:           viper.GetString("DB_HOST"),

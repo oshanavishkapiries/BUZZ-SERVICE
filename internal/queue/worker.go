@@ -113,7 +113,7 @@ func (w *Worker) HandleNotification(ctx context.Context, task *asynq.Task) error
 	if notification.Provider != nil {
 		providerName = *notification.Provider
 	}
-	providerInstance, err := w.registry.Resolve(notification.Channel, providerName)
+	providerInstance, err := w.registry.Resolve(notification.ApplicationID, notification.Channel, providerName)
 	if err != nil {
 		return fmt.Errorf("no provider available for channel %s: %w", notification.Channel, err)
 	}
@@ -160,7 +160,7 @@ func (w *Worker) HandleNotification(ctx context.Context, task *asynq.Task) error
 	// Note: Phase 9 batch processing is handled separately in the batch processor
 	// Individual notifications from Phase 9 batches can optionally track batch_id for audit
 	if notification.BatchID != nil {
-		if err := w.store.IncrementBatchSent(ctx, *notification.BatchID); err != nil {
+		if err := w.store.IncrementBatchSent(ctx, notification.ApplicationID, *notification.BatchID); err != nil {
 			w.logger.Error().Err(err).Msg("Failed to increment batch sent count")
 			// Don't fail the notification delivery if batch update fails
 		}

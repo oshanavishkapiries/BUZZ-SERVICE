@@ -110,9 +110,38 @@ func (j *JSONB) Scan(value interface{}) error {
 	return json.Unmarshal(bytes, j)
 }
 
+// User represents a dashboard account
+type User struct {
+	ID           uuid.UUID `json:"id" db:"id"`
+	Email        string    `json:"email" db:"email"`
+	PasswordHash string    `json:"-" db:"password_hash"`
+	Name         string    `json:"name" db:"name"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// Application represents a tenant workspace
+type Application struct {
+	ID          uuid.UUID `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Description *string   `json:"description,omitempty" db:"description"`
+	OwnerID     uuid.UUID `json:"owner_id" db:"owner_id"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// ApplicationMember maps users to applications with roles
+type ApplicationMember struct {
+	ApplicationID uuid.UUID `json:"application_id" db:"application_id"`
+	UserID        uuid.UUID `json:"user_id" db:"user_id"`
+	Role          string    `json:"role" db:"role"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+}
+
 // Notification represents an individual notification
 type Notification struct {
 	ID                uuid.UUID          `json:"id" db:"id"`
+	ApplicationID     uuid.UUID          `json:"application_id" db:"application_id"`
 	BatchID           *uuid.UUID         `json:"batch_id,omitempty" db:"batch_id"`
 	Channel           Channel            `json:"channel" db:"channel"`
 	Priority          Priority           `json:"priority" db:"priority"`
@@ -145,6 +174,7 @@ type Notification struct {
 // Batch represents a bulk notification operation
 type Batch struct {
 	ID             uuid.UUID   `json:"id" db:"id"`
+	ApplicationID  uuid.UUID   `json:"application_id" db:"application_id"`
 	DatasourceID   *uuid.UUID  `json:"datasource_id,omitempty" db:"datasource_id"`
 	DatasourceName string      `json:"datasource_name" db:"datasource_name"`
 	EndpointName   string      `json:"endpoint_name" db:"endpoint_name"`
@@ -169,6 +199,7 @@ type Batch struct {
 // Template represents a reusable notification template
 type Template struct {
 	ID            uuid.UUID  `json:"id" db:"id"`
+	ApplicationID uuid.UUID  `json:"application_id" db:"application_id"`
 	Name          string     `json:"name" db:"name"`
 	Description   *string    `json:"description,omitempty" db:"description"`
 	Channels      []string   `json:"channels" db:"channels"`
@@ -188,6 +219,7 @@ type Template struct {
 // InboxEntry represents an in-app notification in a user's inbox
 type InboxEntry struct {
 	ID             uuid.UUID  `json:"id" db:"id"`
+	ApplicationID  uuid.UUID  `json:"application_id" db:"application_id"`
 	UserID         string     `json:"user_id" db:"user_id"`
 	NotificationID *uuid.UUID `json:"notification_id,omitempty" db:"notification_id"`
 	Title          string     `json:"title" db:"title"`
@@ -210,20 +242,22 @@ type InboxEntry struct {
 
 // Datasource represents an external API data source for bulk sending
 type Datasource struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	BaseURL     string    `json:"base_url" db:"base_url"`
-	AuthType    string    `json:"auth_type" db:"auth_type"` // bearer, basic, api_key
-	AuthConfig  JSONB     `json:"auth_config" db:"auth_config"`
-	Endpoints   JSONB     `json:"endpoints" db:"endpoints"`
-	Active      bool      `json:"active" db:"active"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	ID            uuid.UUID `json:"id" db:"id"`
+	ApplicationID uuid.UUID `json:"application_id" db:"application_id"`
+	Name          string    `json:"name" db:"name"`
+	BaseURL       string    `json:"base_url" db:"base_url"`
+	AuthType      string    `json:"auth_type" db:"auth_type"` // bearer, basic, api_key
+	AuthConfig    JSONB     `json:"auth_config" db:"auth_config"`
+	Endpoints     JSONB     `json:"endpoints" db:"endpoints"`
+	Active        bool      `json:"active" db:"active"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // APIKey represents an API key for authentication
 type APIKey struct {
 	ID                 uuid.UUID   `json:"id" db:"id"`
+	ApplicationID      uuid.UUID   `json:"application_id" db:"application_id"`
 	Name               string      `json:"name" db:"name"`
 	Description        *string     `json:"description,omitempty" db:"description"`
 	KeyHash            string      `json:"-" db:"key_hash"` // Never expose in JSON
@@ -248,6 +282,7 @@ type APIKey struct {
 // DeviceToken represents a device token for push notifications
 type DeviceToken struct {
 	ID                 uuid.UUID  `json:"id" db:"id"`
+	ApplicationID      uuid.UUID  `json:"application_id" db:"application_id"`
 	UserID             string     `json:"user_id" db:"user_id"`
 	Token              string     `json:"token" db:"token"`
 	Platform           Platform   `json:"platform" db:"platform"`
@@ -269,20 +304,24 @@ type DeviceToken struct {
 
 // ProviderConfig represents a database-stored provider configuration
 type ProviderConfig struct {
-	ID        uuid.UUID `json:"id"         db:"id"`
-	Name      string    `json:"name"       db:"name"`
-	Channel   Channel   `json:"channel"    db:"channel"`
-	Provider  string    `json:"provider"   db:"provider"`
-	Config    JSONB     `json:"config"     db:"config"`
-	IsDefault bool      `json:"is_default" db:"is_default"`
-	IsActive  bool      `json:"is_active"  db:"is_active"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID            uuid.UUID `json:"id"         db:"id"`
+	ApplicationID uuid.UUID `json:"application_id" db:"application_id"`
+	Name          string    `json:"name"       db:"name"`
+	Channel       Channel   `json:"channel"    db:"channel"`
+	Provider      string    `json:"provider"   db:"provider"`
+	Config        JSONB     `json:"config"     db:"config"`
+	IsDefault     bool      `json:"is_default" db:"is_default"`
+	IsActive      bool      `json:"is_active"  db:"is_active"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Custom errors for domain
 var (
-	ErrDatasourceNotFound    = fmt.Errorf("datasource not found")
-	ErrBatchNotFound         = fmt.Errorf("batch not found")
-	ErrProviderConfigNotFound = fmt.Errorf("provider config not found")
+	ErrUserNotFound              = fmt.Errorf("user not found")
+	ErrApplicationNotFound       = fmt.Errorf("application not found")
+	ErrApplicationAccessDenied  = fmt.Errorf("access to application denied")
+	ErrDatasourceNotFound        = fmt.Errorf("datasource not found")
+	ErrBatchNotFound             = fmt.Errorf("batch not found")
+	ErrProviderConfigNotFound     = fmt.Errorf("provider config not found")
 )
