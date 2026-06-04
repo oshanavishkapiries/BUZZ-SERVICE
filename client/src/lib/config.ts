@@ -8,7 +8,7 @@ const DEFAULT_USER_ID = 'user-123';
 
 export const getApiUrl = (): string => {
   if (typeof window === 'undefined') return DEFAULT_API_URL;
-  return localStorage.getItem(API_URL_KEY) || DEFAULT_API_URL;
+  return localStorage.getItem(API_URL_KEY) || window.location.origin;
 };
 
 export const setApiUrl = (url: string): void => {

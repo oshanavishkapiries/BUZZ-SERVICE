@@ -32,6 +32,9 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 		DocExpansion: "none",
 	}))
 
+	// Serve the built Next.js client application
+	app.Static("/client", "./client/out")
+
 	// Webhook routes (public, no auth required)
 	webhookHandler := NewWebhookHandler(db)
 	webhooks := app.Group("/webhooks")

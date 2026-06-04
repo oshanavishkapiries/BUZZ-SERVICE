@@ -157,7 +157,7 @@ export function Sidebar() {
 				{/* Logo */}
 				<div className="flex items-center gap-2.5 px-4 py-4 border-b border-[var(--border-color)]">
 					<div className="flex items-center justify-center w-7 h-7 shrink-0">
-						<img src="/BeetleCode-icon-red.svg" alt="BeetleCode" className="w-6 h-6" />
+						<img src="/client/BeetleCode-icon-red.svg" alt="BeetleCode" className="w-6 h-6" />
 					</div>
 					<div>
 						<div className="text-sm font-bold text-[var(--text-primary)] leading-none">Buzz</div>

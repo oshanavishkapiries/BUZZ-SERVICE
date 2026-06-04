@@ -10,7 +10,7 @@ export default function SignupPage() {
 				<div className="absolute -top-40 -right-40 w-80 h-80 bg-[var(--accent)] opacity-10 rounded-full blur-3xl pointer-events-none"></div>
 				
 				<div className="flex flex-col items-center mb-6 relative z-10">
-					<img src="/BeetleCode-icon-red.svg" alt="Buzz Logo" className="w-12 h-12 mb-3" />
+					<img src="/client/BeetleCode-icon-red.svg" alt="Buzz Logo" className="w-12 h-12 mb-3" />
 					<h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Registration Disabled</h1>
 					<p className="text-sm text-[var(--text-muted)] mt-1">Self-service registration is turned off</p>
 				</div>

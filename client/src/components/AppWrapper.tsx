@@ -10,7 +10,8 @@ export function AppWrapper({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
 	const [authorized, setAuthorized] = useState<boolean | null>(null);
 
-	const isAuthPage = pathname === '/login' || pathname === '/signup';
+	const normalizedPathname = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
+	const isAuthPage = normalizedPathname === '/login' || normalizedPathname === '/signup';
 
 	useEffect(() => {
 		const token = localStorage.getItem('buzz_jwt_token');
