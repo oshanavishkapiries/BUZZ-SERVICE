@@ -30,13 +30,17 @@ go install github.com/air-verse/air@latest
 air -c .air.toml
 ```
 
-**3. Start the client app**
+**3. Build and serve the client app**
+
+The client application is statically exported and natively hosted by the Go API server at the `/client` route. You just need to build the frontend first:
 
 ```bash
 cd client
 npm install
-npm run dev
+npm run build
+cd ..
 ```
+Now, navigate to `http://localhost:8080/client` in your browser. The client automatically determines the API base URL from the domain it is served on.
 **4. Login to the dashboard**
 
 The system comes pre-seeded with a default system-wide administrator account:
