@@ -92,7 +92,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : health ? (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Status</div>
                 <div className="flex items-center gap-2">

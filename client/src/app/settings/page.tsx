@@ -181,7 +181,7 @@ export default function SettingsPage() {
 				<p className="text-sm text-[var(--text-secondary)] mt-1">Configure your Buzz profile and API access keys</p>
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* Left Column: API Client Configuration */}
 				<div className="space-y-6">
 					<Card>

@@ -83,9 +83,9 @@ export default function DevicesPage() {
         <p className="text-sm text-[var(--text-secondary)] mt-1">Push notification device tokens for <span className="font-mono">{userId}</span></p>
       </div>
 
-      <div className="grid grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Register form */}
-        <div className="col-span-2">
+        <div className="col-span-1 lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export default function DevicesPage() {
         </div>
 
         {/* Device list */}
-        <div className="col-span-3">
+        <div className="col-span-1 lg:col-span-3">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

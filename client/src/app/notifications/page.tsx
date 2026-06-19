@@ -191,8 +191,8 @@ export default function NotificationsPage() {
 
       {/* ── SEND TAB ─────────────────────────────────────────────────────────── */}
       {tab === 'send' && (
-        <div className="grid grid-cols-5 gap-6">
-          <div className="col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="col-span-1 lg:col-span-3">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -390,7 +390,7 @@ export default function NotificationsPage() {
           </div>
 
           {/* ── PREVIEW PANEL ──────────────────────────────────────────────── */}
-          <div className="col-span-2">
+          <div className="col-span-1 lg:col-span-2">
             {sendMode === 'template' && selectedTpl ? (
               <Card className="sticky top-6">
                 <CardHeader>

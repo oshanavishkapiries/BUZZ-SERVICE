@@ -23,7 +23,7 @@ export function HealthStatus() {
   if (status === 'loading') return null;
 
   return (
-    <div className={`status-pill fixed top-4 right-4 z-50 ${status === 'up' ? 'status-pill-up' : 'status-pill-down'}`}>
+    <div className={`status-pill fixed top-3 md:top-4 right-4 z-50 ${status === 'up' ? 'status-pill-up' : 'status-pill-down'}`}>
       <span style={{ width: '0.375rem', height: '0.375rem', borderRadius: '50%', flexShrink: 0,
         background: status === 'up' ? '#16a34a' : '#dc2626' }} />
       {status === 'up' ? 'API Connected' : 'API Offline'}

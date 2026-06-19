@@ -24,6 +24,7 @@ import {
 	Folder,
 	User,
 	FileCode,
+	X,
 } from 'lucide-react';
 
 const navItems = [
@@ -44,7 +45,15 @@ const bottomItems = [
 	{ href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+	isOpen?: boolean;
+	onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
+	const handleLinkClick = () => {
+		if (onClose) onClose();
+	};
 	const pathname = usePathname();
 	const router = useRouter();
 	
@@ -155,16 +164,37 @@ export function Sidebar() {
 
 	return (
 		<>
-			<aside className="w-56 h-screen fixed left-0 top-0 flex flex-col border-r border-[var(--border-color)] bg-[var(--bg-secondary)] z-30">
+			{/* Backdrop overlay for mobile */}
+			{isOpen && (
+				<div 
+					className="md:hidden fixed inset-0 bg-black/40 z-25 transition-opacity animate-in fade-in duration-200" 
+					onClick={onClose}
+				/>
+			)}
+
+			<aside className={`w-56 h-screen fixed left-0 top-0 flex flex-col border-r border-[var(--border-color)] bg-[var(--bg-secondary)] z-30 transition-transform duration-200 md:translate-x-0 ${
+				isOpen ? 'translate-x-0' : '-translate-x-full'
+			}`}>
 				{/* Logo */}
-				<div className="flex items-center gap-2.5 px-4 py-4 border-b border-[var(--border-color)]">
-					<div className="flex items-center justify-center w-7 h-7 shrink-0">
-						<img src="/BeetleCode-icon-red.svg" alt="BeetleCode" className="w-6 h-6" />
+				<div className="flex items-center justify-between px-4 py-4 border-b border-[var(--border-color)]">
+					<div className="flex items-center gap-2.5">
+						<div className="flex items-center justify-center w-7 h-7 shrink-0">
+							<img src="/BeetleCode-icon-red.svg" alt="BeetleCode" className="w-6 h-6" />
+						</div>
+						<div>
+							<div className="text-sm font-bold text-[var(--text-primary)] leading-none">Buzz</div>
+							<div className="text-[0.65rem] text-[var(--text-muted)] mt-0.5">Service Client</div>
+						</div>
 					</div>
-					<div>
-						<div className="text-sm font-bold text-[var(--text-primary)] leading-none">Buzz</div>
-						<div className="text-[0.65rem] text-[var(--text-muted)] mt-0.5">Service Client</div>
-					</div>
+					{onClose && (
+						<button
+							onClick={onClose}
+							className="md:hidden p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors focus:outline-none"
+							title="Close Menu"
+						>
+							<X size={16} />
+						</button>
+					)}
 				</div>
 
 				{/* Application Switcher Dropdown */}
@@ -236,6 +266,7 @@ export function Sidebar() {
 								<Link
 									key={href}
 									href={href}
+									onClick={handleLinkClick}
 									className={`flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] text-sm transition-colors ${
 										active
 											? 'bg-[var(--accent)] text-white font-medium shadow-sm'
@@ -292,6 +323,7 @@ export function Sidebar() {
 										href={href}
 										target="_blank"
 										rel="noopener noreferrer"
+										onClick={handleLinkClick}
 										className={className}
 									>
 										<Icon size={15} className="shrink-0" />
@@ -304,6 +336,7 @@ export function Sidebar() {
 								<Link
 									key={href}
 									href={href}
+									onClick={handleLinkClick}
 									className={className}
 								>
 									<Icon size={15} className="shrink-0" />
