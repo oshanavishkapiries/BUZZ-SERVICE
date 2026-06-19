@@ -37,6 +37,8 @@ export default function SettingsPage() {
 	const [activeApp, setActiveApp] = useState<Types.Application | null>(null);
 	const [deletingApp, setDeletingApp] = useState(false);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [confirmAppName, setConfirmAppName] = useState('');
 
 	const handleCopyOverride = () => {
 		if (!apiKey) return;
@@ -142,12 +144,11 @@ export default function SettingsPage() {
 		setTimeout(() => setCopied(false), 2000);
 	};
 
-	const handleDeleteApp = async () => {
+	const handleDeleteApp = async (e?: React.FormEvent) => {
+		if (e) e.preventDefault();
 		if (!activeAppId || !activeApp) return;
-
-		const confirmation = prompt(`To confirm deletion, type the name of the workspace: "${activeApp.name}"`);
-		if (confirmation !== activeApp.name) {
-			alert("Workspace name mismatch. Deletion cancelled.");
+		if (confirmAppName !== activeApp.name) {
+			setDeleteError("Workspace name mismatch. Deletion cancelled.");
 			return;
 		}
 
@@ -165,6 +166,7 @@ export default function SettingsPage() {
 				localStorage.setItem('buzz_active_app_id', nextApp.id);
 			}
 			
+			setShowDeleteModal(false);
 			window.location.href = '/';
 		} catch (err: any) {
 			setDeleteError(err.message || 'Failed to delete application workspace');
@@ -289,16 +291,16 @@ export default function SettingsPage() {
 								<div className="text-xs text-[var(--text-secondary)] leading-normal">
 									This action is <strong>irreversible</strong> and will delete all configuration settings for <strong>{activeApp.name}</strong>.
 								</div>
-								{deleteError && (
-									<div className="text-xs text-red-500 font-semibold">{deleteError}</div>
-								)}
 								<Button
 									variant="destructive"
-									disabled={deletingApp}
-									onClick={handleDeleteApp}
+									onClick={() => {
+										setConfirmAppName('');
+										setDeleteError(null);
+										setShowDeleteModal(true);
+									}}
 									className="w-full"
 								>
-									{deletingApp ? 'Deleting Workspace...' : 'Delete Application Workspace'}
+									Delete Application Workspace
 								</Button>
 							</CardContent>
 						</Card>
@@ -453,6 +455,62 @@ export default function SettingsPage() {
 					</Card>
 				</div>
 			</div>
+
+			{showDeleteModal && activeApp && (
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200">
+					<div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-[var(--radius)] w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+						<div className="text-sm font-bold text-red-500 mb-2 uppercase tracking-wide">
+							Confirm Workspace Deletion
+						</div>
+						<p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4">
+							This action is irreversible. It will permanently delete the application <strong>{activeApp.name}</strong> along with all associated templates, providers, datasources, and logs.
+						</p>
+
+						<form onSubmit={handleDeleteApp} className="space-y-4">
+							<div>
+								<label className="block text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+									Type the workspace name <span className="font-mono font-bold select-all">"{activeApp.name}"</span> to confirm:
+								</label>
+								<input
+									type="text"
+									required
+									value={confirmAppName}
+									onChange={(e) => setConfirmAppName(e.target.value)}
+									placeholder={activeApp.name}
+									className="w-full px-3 py-2 text-sm rounded-[var(--radius)] border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+								/>
+							</div>
+
+							{deleteError && (
+								<div className="text-xs text-red-500 font-semibold">
+									{deleteError}
+								</div>
+							)}
+
+							<div className="flex items-center justify-end gap-3 mt-6">
+								<button
+									type="button"
+									onClick={() => setShowDeleteModal(false)}
+									className="px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] rounded-[var(--radius)] transition-colors"
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									disabled={deletingApp || confirmAppName !== activeApp.name}
+									className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 active:scale-[0.98] rounded-[var(--radius)] shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+								>
+									{deletingApp ? (
+										<div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									) : (
+										'Delete Workspace'
+									)}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

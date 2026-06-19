@@ -23,6 +23,7 @@ import {
 	LogOut,
 	Folder,
 	User,
+	FileCode,
 } from 'lucide-react';
 
 const navItems = [
@@ -39,6 +40,7 @@ const navItems = [
 
 const bottomItems = [
 	{ href: '/docs',     label: 'Docs',     icon: BookOpen },
+	{ href: '/swagger/index.html', label: 'API Specs', icon: FileCode },
 	{ href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -275,15 +277,34 @@ export function Sidebar() {
 					<div className="space-y-0.5">
 						{dynamicBottomItems.map(({ href, label, icon: Icon }) => {
 							const active = isActive(href);
+							const isExternal = href.startsWith('http') || href.startsWith('/swagger');
+							
+							const className = `flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] text-sm transition-colors ${
+								active
+									? 'bg-[var(--accent)] text-white font-medium'
+									: 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+							}`;
+
+							if (isExternal) {
+								return (
+									<a
+										key={href}
+										href={href}
+										target="_blank"
+										rel="noopener noreferrer"
+										className={className}
+									>
+										<Icon size={15} className="shrink-0" />
+										{label}
+									</a>
+								);
+							}
+
 							return (
 								<Link
 									key={href}
 									href={href}
-									className={`flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] text-sm transition-colors ${
-										active
-											? 'bg-[var(--accent)] text-white font-medium'
-											: 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-									}`}
+									className={className}
 								>
 									<Icon size={15} className="shrink-0" />
 									{label}
