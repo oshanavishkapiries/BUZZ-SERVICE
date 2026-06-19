@@ -33,6 +33,11 @@ export default function SettingsPage() {
 
 	const [currentUser, setCurrentUser] = useState<any>(null);
 
+	// Application deletion state
+	const [activeApp, setActiveApp] = useState<Types.Application | null>(null);
+	const [deletingApp, setDeletingApp] = useState(false);
+	const [deleteError, setDeleteError] = useState<string | null>(null);
+
 	const handleCopyOverride = () => {
 		if (!apiKey) return;
 		navigator.clipboard.writeText(apiKey);
@@ -51,6 +56,12 @@ export default function SettingsPage() {
 
 		if (appId) {
 			fetchAPIKeys(appId);
+			api.listApplications()
+				.then(res => {
+					const found = res.applications.find(a => a.id === appId);
+					if (found) setActiveApp(found);
+				})
+				.catch(err => console.error(err));
 		}
 
 		api.getMe()
@@ -129,6 +140,36 @@ export default function SettingsPage() {
 		navigator.clipboard.writeText(generatedRawKey);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
+	};
+
+	const handleDeleteApp = async () => {
+		if (!activeAppId || !activeApp) return;
+
+		const confirmation = prompt(`To confirm deletion, type the name of the workspace: "${activeApp.name}"`);
+		if (confirmation !== activeApp.name) {
+			alert("Workspace name mismatch. Deletion cancelled.");
+			return;
+		}
+
+		setDeletingApp(true);
+		setDeleteError(null);
+
+		try {
+			await api.deleteApplication(activeAppId);
+			localStorage.removeItem('buzz_active_app_id');
+			
+			// Load remaining apps
+			const res = await api.listApplications();
+			if (res.applications && res.applications.length > 0) {
+				const nextApp = res.applications[0];
+				localStorage.setItem('buzz_active_app_id', nextApp.id);
+			}
+			
+			window.location.href = '/';
+		} catch (err: any) {
+			setDeleteError(err.message || 'Failed to delete application workspace');
+			setDeletingApp(false);
+		}
 	};
 
 	return (
@@ -233,6 +274,35 @@ export default function SettingsPage() {
 							)}
 						</CardContent>
 					</Card>
+
+					{activeApp && currentUser && (currentUser.role === 'owner' || activeApp.owner_id === currentUser.id) && (
+						<Card className="border-red-500/20 bg-red-500/5">
+							<CardHeader>
+								<CardTitle className="text-red-500 flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
+									Danger Zone
+								</CardTitle>
+								<CardDescription className="text-red-600 dark:text-red-400 text-xs">
+									Permanently delete this application workspace and all associated templates, providers, datasources, and notification logs.
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="space-y-3">
+								<div className="text-xs text-[var(--text-secondary)] leading-normal">
+									This action is <strong>irreversible</strong> and will delete all configuration settings for <strong>{activeApp.name}</strong>.
+								</div>
+								{deleteError && (
+									<div className="text-xs text-red-500 font-semibold">{deleteError}</div>
+								)}
+								<Button
+									variant="destructive"
+									disabled={deletingApp}
+									onClick={handleDeleteApp}
+									className="w-full"
+								>
+									{deletingApp ? 'Deleting Workspace...' : 'Delete Application Workspace'}
+								</Button>
+							</CardContent>
+						</Card>
+					)}
 				</div>
 
 				{/* Right Column: Manage API keys of the active application */}

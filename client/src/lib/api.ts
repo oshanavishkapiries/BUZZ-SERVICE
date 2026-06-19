@@ -302,6 +302,13 @@ class APIClient {
     });
   }
 
+  async deleteApplication(appId: string): Promise<Types.MessageResponse> {
+    return this.request<Types.MessageResponse>(`/api/v1/applications/${appId}`, {
+      method: 'DELETE',
+      noUserID: true,
+    });
+  }
+
   async listAPIKeys(appId: string): Promise<{ api_keys: Types.APIKey[] }> {
     return this.request<{ api_keys: Types.APIKey[] }>(`/api/v1/applications/${appId}/keys`, {
       noUserID: true,

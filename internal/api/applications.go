@@ -554,3 +554,69 @@ func (h *ApplicationHandler) RemoveMember(c *fiber.Ctx) error {
 		"message": "member removed successfully",
 	})
 }
+
+func (h *ApplicationHandler) DeleteApplication(c *fiber.Ctx) error {
+	userIDStr, ok := c.Locals("auth_user_id").(string)
+	if !ok || userIDStr == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "unauthorized",
+		})
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "invalid user id in session",
+		})
+	}
+
+	appIDStr := c.Params("appId")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid application ID",
+		})
+	}
+
+	// Fetch application to check ownership
+	app, err := h.store.GetApplication(c.Context(), appID)
+	if err != nil {
+		if err == domain.ErrApplicationNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "application not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to fetch application details",
+		})
+	}
+
+	// Fetch the user's role from database to see if they are system owner
+	var userRole string
+	err = h.store.DB().QueryRowContext(c.Context(), "SELECT role FROM users WHERE id = $1", userID).Scan(&userRole)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to verify permissions",
+		})
+	}
+
+	// Allow delete if system-wide owner OR if they are the application owner
+	if userRole != "owner" && app.OwnerID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "forbidden: only the workspace owner or system administrator can delete this application",
+		})
+	}
+
+	// Do the delete
+	if err := h.store.DeleteApplication(c.Context(), appID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to delete application",
+			"details": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "application deleted successfully",
+	})
+}
+

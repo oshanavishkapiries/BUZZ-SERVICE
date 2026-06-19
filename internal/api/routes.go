@@ -61,6 +61,7 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	appHandler := NewApplicationHandler(db)
 	v1.Get("/applications", appHandler.ListApplications)
 	v1.Post("/applications", appHandler.CreateApplication)
+	v1.Delete("/applications/:appId", appHandler.DeleteApplication)
 	v1.Get("/applications/:appId/keys", appHandler.ListAPIKeys)
 	v1.Post("/applications/:appId/keys", appHandler.CreateAPIKey)
 	v1.Delete("/applications/:appId/keys/:keyId", appHandler.DeleteAPIKey)
