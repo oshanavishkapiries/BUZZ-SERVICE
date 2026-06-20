@@ -132,8 +132,10 @@ func SetupRoutes(app *fiber.App, db *store.PostgresStore, producer *queue.Produc
 	batchHandler := NewBatchHandler(db, producer)
 	batches := v1.Group("/batches")
 	batches.Post("/send", RequireScope("batch:send"), batchHandler.SendBulk)
-	batches.Get("/:id", RequireScope("batch:read"), batchHandler.GetBatchStatus)
 	batches.Get("/", RequireScope("batch:read"), batchHandler.ListBatches)
+	batches.Get("/:id", RequireScope("batch:read"), batchHandler.GetBatchStatus)
+	batches.Post("/:id/cancel", RequireScope("batch:send"), batchHandler.CancelBatch)
+	batches.Delete("/:id", RequireScope("batch:send"), batchHandler.DeleteBatch)
 
 	// Provider configs (notification delivery providers)
 	providerHandler := NewProviderHandler(db, registry)

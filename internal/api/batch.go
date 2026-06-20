@@ -116,7 +116,8 @@ func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 	// Save batch to database
 	if err := h.store.CreateBatch(ctx, batch); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to create batch",
+			"error":   "failed to create batch",
+			"details": err.Error(),
 		})
 	}
 
@@ -171,17 +172,74 @@ func (h *BatchHandler) GetBatchStatus(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(http.StatusOK).JSON(fiber.Map{
-		"batch_id":      batch.ID,
-		"status":        batch.Status,
-		"total":         batch.Total,
-		"sent":          batch.Sent,
-		"failed":        batch.Failed,
-		"skipped":       batch.Skipped,
-		"error_message": batch.ErrorMessage,
-		"created_at":    batch.CreatedAt,
-		"completed_at":  batch.CompletedAt,
-	})
+	return c.Status(http.StatusOK).JSON(batch)
+}
+
+// CancelBatch godoc
+// @Summary      Cancel a batch
+// @Description  Cancel a batch that is still pending, fetching, or queued (not yet delivering)
+// @Tags         batches
+// @Produce      json
+// @Param        id   path      string  true  "Batch UUID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/batches/{id}/cancel [post]
+func (h *BatchHandler) CancelBatch(c *fiber.Ctx) error {
+	ctx := c.Context()
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
+	batchID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "invalid batch ID"})
+	}
+
+	if err := h.store.CancelBatch(ctx, appID, batchID); err != nil {
+		return c.Status(http.StatusConflict).JSON(fiber.Map{
+			"error":   "cannot cancel batch",
+			"details": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{"message": "batch cancelled"})
+}
+
+// DeleteBatch godoc
+// @Summary      Delete a batch
+// @Description  Permanently delete a batch in a terminal state (cancelled, failed, or completed)
+// @Tags         batches
+// @Produce      json
+// @Param        id   path      string  true  "Batch UUID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  ErrorResponse
+// @Failure      409  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/batches/{id} [delete]
+func (h *BatchHandler) DeleteBatch(c *fiber.Ctx) error {
+	ctx := c.Context()
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
+	batchID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "invalid batch ID"})
+	}
+
+	if err := h.store.DeleteBatch(ctx, appID, batchID); err != nil {
+		return c.Status(http.StatusConflict).JSON(fiber.Map{
+			"error":   "cannot delete batch",
+			"details": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{"message": "batch deleted"})
 }
 
 // ListBatches godoc
@@ -214,7 +272,8 @@ func (h *BatchHandler) ListBatches(c *fiber.Ctx) error {
 	batches, total, err := h.store.ListBatches(ctx, appID, status, limit, offset)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to list batches",
+			"error":   "failed to list batches",
+			"details": err.Error(),
 		})
 	}
 

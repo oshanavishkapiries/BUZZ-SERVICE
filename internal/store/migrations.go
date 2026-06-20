@@ -31,13 +31,25 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
 
-	// Get current version
-	var currentVersion int
-	err = s.db.QueryRowContext(ctx,
-		"SELECT COALESCE(MAX(version), -1) FROM schema_migrations",
-	).Scan(&currentVersion)
+	// Fetch the set of already-applied versions.
+	// Using a set (not MAX) so that a high-numbered seed migration (e.g. 999)
+	// does not block lower-numbered structural migrations added later.
+	rows, err := s.db.QueryContext(ctx, "SELECT version FROM schema_migrations")
 	if err != nil {
-		return fmt.Errorf("failed to get current version: %w", err)
+		return fmt.Errorf("failed to get applied migrations: %w", err)
+	}
+	applied := make(map[int]bool)
+	for rows.Next() {
+		var v int
+		if err := rows.Scan(&v); err != nil {
+			rows.Close()
+			return fmt.Errorf("failed to scan migration version: %w", err)
+		}
+		applied[v] = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("failed to read applied migrations: %w", err)
 	}
 
 	// Load migrations
@@ -46,9 +58,9 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 		return err
 	}
 
-	// Apply pending migrations
+	// Apply every migration that has not yet been recorded, in version order.
 	for _, m := range migrations {
-		if m.Version <= currentVersion {
+		if applied[m.Version] {
 			continue
 		}
 

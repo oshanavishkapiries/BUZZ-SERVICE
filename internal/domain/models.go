@@ -195,10 +195,10 @@ type Batch struct {
 	Priority       Priority    `json:"priority" db:"priority"`
 	TemplateData   JSONB       `json:"template_data,omitempty" db:"template_data"`
 	Status         BatchStatus `json:"status" db:"status"`
-	Total          int         `json:"total" db:"total"`
-	Sent           int         `json:"sent" db:"sent"`
-	Failed         int         `json:"failed" db:"failed"`
-	Skipped        int         `json:"skipped" db:"skipped"`
+	Total          int         `json:"total_count" db:"total"`
+	Sent           int         `json:"sent_count" db:"sent"`
+	Failed         int         `json:"failed_count" db:"failed"`
+	Skipped        int         `json:"skipped_count" db:"skipped"`
 	IdempotencyKey string      `json:"idempotency_key,omitempty" db:"idempotency_key"`
 	ErrorMessage   *string     `json:"error_message,omitempty" db:"error_message"`
 	StartedAt      *time.Time  `json:"started_at,omitempty" db:"started_at"`

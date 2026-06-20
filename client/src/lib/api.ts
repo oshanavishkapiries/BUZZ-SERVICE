@@ -198,6 +198,14 @@ class APIClient {
     return this.request<Types.Batch>(`/api/v1/batches/${id}`);
   }
 
+  async cancelBatch(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/v1/batches/${id}/cancel`, { method: 'POST' });
+  }
+
+  async deleteBatch(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/v1/batches/${id}`, { method: 'DELETE' });
+  }
+
   async listBatches(params?: {
     status?: string;
     limit?: number;

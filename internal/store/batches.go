@@ -16,7 +16,7 @@ func (s *PostgresStore) CreateBatch(ctx context.Context, batch *domain.Batch) er
 			id, application_id, datasource_id, datasource_name, endpoint_name, endpoint_params,
 			template_name, channel, priority, template_data,
 			status, idempotency_key, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULLIF($12, ''), $13, $14)
 	`
 
 	_, err := s.db.ExecContext(ctx, query,
@@ -29,13 +29,49 @@ func (s *PostgresStore) CreateBatch(ctx context.Context, batch *domain.Batch) er
 	return err
 }
 
+// CancelBatch cancels a batch that has not yet started delivering
+func (s *PostgresStore) CancelBatch(ctx context.Context, appID uuid.UUID, id uuid.UUID) error {
+	query := `
+		UPDATE batches SET status = 'cancelled', updated_at = NOW()
+		WHERE id = $1 AND application_id = $2
+		  AND status IN ('pending', 'fetching', 'queued')
+	`
+	result, err := s.db.ExecContext(ctx, query, id, appID)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("batch not found or already in a non-cancellable state")
+	}
+	return nil
+}
+
+// DeleteBatch permanently removes a batch that is in a terminal state
+func (s *PostgresStore) DeleteBatch(ctx context.Context, appID uuid.UUID, id uuid.UUID) error {
+	query := `
+		DELETE FROM batches
+		WHERE id = $1 AND application_id = $2
+		  AND status IN ('cancelled', 'failed', 'completed')
+	`
+	result, err := s.db.ExecContext(ctx, query, id, appID)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("batch not found or cannot be deleted (only cancelled/failed/completed batches may be deleted)")
+	}
+	return nil
+}
+
 // GetBatch retrieves a batch by ID
 func (s *PostgresStore) GetBatch(ctx context.Context, appID uuid.UUID, id uuid.UUID) (*domain.Batch, error) {
 	query := `
 		SELECT id, application_id, datasource_id, datasource_name, endpoint_name, endpoint_params,
 		       template_name, channel, priority, template_data,
 		       status, total, sent, failed, skipped,
-		       idempotency_key, error_message,
+		       COALESCE(idempotency_key, ''), error_message,
 		       started_at, completed_at, created_at, updated_at
 		FROM batches
 		WHERE id = $1 AND application_id = $2
@@ -66,7 +102,7 @@ func (s *PostgresStore) GetBatchByIdempotencyKey(ctx context.Context, appID uuid
 		SELECT id, application_id, datasource_id, datasource_name, endpoint_name, endpoint_params,
 		       template_name, channel, priority, template_data,
 		       status, total, sent, failed, skipped,
-		       idempotency_key, error_message,
+		       COALESCE(idempotency_key, ''), error_message,
 		       started_at, completed_at, created_at, updated_at
 		FROM batches
 		WHERE idempotency_key = $1 AND application_id = $2
@@ -150,9 +186,9 @@ func (s *PostgresStore) ListBatches(ctx context.Context, appID uuid.UUID, status
 	}
 
 	// Get batches
-	query := `SELECT id, application_id, datasource_id, datasource_name, endpoint_name, endpoint_params, 
-	         template_name, channel, priority, template_data, status, total, sent, failed, skipped, 
-	         idempotency_key, error_message, started_at, completed_at, created_at, updated_at 
+	query := `SELECT id, application_id, datasource_id, datasource_name, endpoint_name, endpoint_params,
+	         template_name, channel, priority, template_data, status, total, sent, failed, skipped,
+	         COALESCE(idempotency_key, ''), error_message, started_at, completed_at, created_at, updated_at
 	  FROM batches WHERE application_id = $1`
 
 	args := []interface{}{appID}

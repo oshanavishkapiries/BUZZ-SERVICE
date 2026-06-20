@@ -1,24 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import { Batch, Channel, Priority } from '@/lib/types';
+import { Batch, Channel, Datasource, Priority, Template } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Layers, Send, RefreshCcw } from 'lucide-react';
+import { Layers, Send, RefreshCcw, XCircle, Trash2 } from 'lucide-react';
 
 const STATUS_VARIANT: Record<string, 'success' | 'info' | 'warning' | 'destructive' | 'secondary'> = {
   completed:  'success',
   processing: 'info',
   queued:     'warning',
+  delivering: 'warning',
+  fetching:   'info',
   failed:     'destructive',
   pending:    'secondary',
 };
+
+const IN_PROGRESS = new Set(['pending', 'fetching', 'queued', 'delivering', 'processing']);
 
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max === 0 ? 0 : Math.min(100, Math.round((value / max) * 100));
@@ -36,19 +39,27 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
 }
 
 export default function BatchesPage() {
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [batches, setBatches]       = useState<Batch[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [listError, setListError]   = useState<string | null>(null);
+  const [showForm, setShowForm]     = useState(false);
 
-  const [datasource, setDatasource] = useState('');
-  const [endpoint, setEndpoint] = useState('');
+  // Form data
+  const [datasources, setDatasources]         = useState<Datasource[]>([]);
+  const [templates, setTemplates]             = useState<Template[]>([]);
+  const [endpointOptions, setEndpointOptions] = useState<string[]>([]);
+
+  const [datasource, setDatasource]     = useState('');
+  const [endpoint, setEndpoint]         = useState('');
   const [templateName, setTemplateName] = useState('');
-  const [channel, setChannel] = useState<Channel>('email');
-  const [priority, setPriority] = useState<Priority>('normal');
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const [sentId, setSentId] = useState<string | null>(null);
+  const [channel, setChannel]           = useState<Channel>('email');
+  const [priority, setPriority]         = useState<Priority>('normal');
+  const [sending, setSending]           = useState(false);
+  const [sendError, setSendError]       = useState<string | null>(null);
+  const [sentId, setSentId]             = useState<string | null>(null);
+  const [actionError, setActionError]   = useState<string | null>(null);
+
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -64,7 +75,56 @@ export default function BatchesPage() {
     }
   };
 
+  // Auto-poll every 4 s while any batch is in progress
+  useEffect(() => {
+    const anyInProgress = batches.some(b => IN_PROGRESS.has(b.status));
+    if (anyInProgress && !pollRef.current) {
+      pollRef.current = setInterval(load, 4000);
+    } else if (!anyInProgress && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    return () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    };
+  }, [batches]);
+
   useEffect(() => { load(); }, []);
+
+  // Load datasources + templates when the form opens
+  useEffect(() => {
+    if (!showForm) return;
+    api.listDatasources().then(r => setDatasources(r.data || [])).catch(() => {});
+    api.listTemplates({ limit: 100 }).then(r => setTemplates(r.data || [])).catch(() => {});
+  }, [showForm]);
+
+  const handleDatasourceChange = (name: string) => {
+    setDatasource(name);
+    setEndpoint('');
+    const ds = datasources.find(d => d.name === name);
+    setEndpointOptions(ds?.endpoints ? Object.keys(ds.endpoints) : []);
+  };
+
+  const handleCancel = async (id: string) => {
+    setActionError(null);
+    try {
+      await api.cancelBatch(id);
+      await load();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to cancel');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this batch permanently?')) return;
+    setActionError(null);
+    try {
+      await api.deleteBatch(id);
+      await load();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to delete');
+    }
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +135,7 @@ export default function BatchesPage() {
       const r = await api.sendBulk({ datasource_name: datasource, endpoint_name: endpoint, template_name: templateName, channel, priority });
       setSentId(r.batch_id);
       setDatasource(''); setEndpoint(''); setTemplateName('');
+      setEndpointOptions([]);
       setShowForm(false);
       await load();
     } catch (e) {
@@ -108,6 +169,11 @@ export default function BatchesPage() {
           <AlertDescription>Batch submitted — ID: <span className="font-mono">{sentId}</span></AlertDescription>
         </Alert>
       )}
+      {actionError && (
+        <Alert variant="destructive">
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      )}
 
       {showForm && (
         <Card className="max-w-lg">
@@ -119,21 +185,61 @@ export default function BatchesPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSend} className="space-y-4">
+
+              {/* Datasource — dropdown from registered datasources */}
               <div>
-                <Label htmlFor="ds">Datasource Name</Label>
-                <Input id="ds" value={datasource} onChange={e => setDatasource(e.target.value)}
-                  placeholder="crm" required />
+                <Label htmlFor="ds">Datasource</Label>
+                <Select
+                  id="ds"
+                  value={datasource}
+                  onChange={e => handleDatasourceChange(e.target.value)}
+                  required
+                >
+                  <option value="">— select datasource —</option>
+                  {datasources.map(d => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </Select>
               </div>
+
+              {/* Endpoint — dropdown populated from selected datasource's endpoints */}
               <div>
-                <Label htmlFor="ep">Endpoint Name</Label>
-                <Input id="ep" value={endpoint} onChange={e => setEndpoint(e.target.value)}
-                  placeholder="active_users" required />
+                <Label htmlFor="ep">Endpoint</Label>
+                <Select
+                  id="ep"
+                  value={endpoint}
+                  onChange={e => setEndpoint(e.target.value)}
+                  required
+                  disabled={endpointOptions.length === 0}
+                >
+                  <option value="">— select endpoint —</option>
+                  {endpointOptions.map(ep => (
+                    <option key={ep} value={ep}>{ep}</option>
+                  ))}
+                </Select>
+                {datasource && endpointOptions.length === 0 && (
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                    This datasource has no configured endpoints.
+                  </p>
+                )}
               </div>
+
+              {/* Template — dropdown from registered templates */}
               <div>
-                <Label htmlFor="tmpl">Template Name</Label>
-                <Input id="tmpl" value={templateName} onChange={e => setTemplateName(e.target.value)}
-                  placeholder="welcome_email" required />
+                <Label htmlFor="tmpl">Template</Label>
+                <Select
+                  id="tmpl"
+                  value={templateName}
+                  onChange={e => setTemplateName(e.target.value)}
+                  required
+                >
+                  <option value="">— select template —</option>
+                  {templates.map(t => (
+                    <option key={t.id} value={t.name}>{t.name} ({t.channels?.join(', ')})</option>
+                  ))}
+                </Select>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="bch">Channel</Label>
@@ -154,8 +260,9 @@ export default function BatchesPage() {
                   </Select>
                 </div>
               </div>
+
               {sendError && <Alert variant="destructive"><AlertDescription>{sendError}</AlertDescription></Alert>}
-              <Button type="submit" disabled={sending} className="w-full">
+              <Button type="submit" disabled={sending || !datasource || !endpoint || !templateName} className="w-full">
                 <Layers size={14} />
                 {sending ? 'Submitting…' : 'Submit Batch'}
               </Button>
@@ -188,11 +295,13 @@ export default function BatchesPage() {
               <thead>
                 <tr>
                   <th>Datasource / Endpoint</th>
+                  <th>Template</th>
                   <th>Status</th>
                   <th>Progress</th>
                   <th className="text-right">Sent</th>
                   <th className="text-right">Failed</th>
                   <th className="text-right">Total</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -202,6 +311,9 @@ export default function BatchesPage() {
                       <div className="font-medium text-xs">{b.datasource_name}</div>
                       <div className="text-xs text-[var(--text-muted)]">{b.endpoint_name}</div>
                     </td>
+                    <td>
+                      <span className="text-xs font-mono">{b.template_name}</span>
+                    </td>
                     <td><Badge variant={STATUS_VARIANT[b.status] ?? 'secondary'}>{b.status}</Badge></td>
                     <td className="min-w-[120px]">
                       <ProgressBar value={b.sent_count} max={b.total_count} />
@@ -209,6 +321,20 @@ export default function BatchesPage() {
                     <td className="text-right text-xs font-mono text-green-600 dark:text-green-400">{b.sent_count}</td>
                     <td className="text-right text-xs font-mono text-red-500">{b.failed_count}</td>
                     <td className="text-right text-xs font-mono text-[var(--text-muted)]">{b.total_count}</td>
+                    <td className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {IN_PROGRESS.has(b.status) && (
+                          <Button variant="ghost" size="sm" onClick={() => handleCancel(b.id)} title="Cancel batch">
+                            <XCircle size={13} className="text-yellow-500" />
+                          </Button>
+                        )}
+                        {['cancelled', 'failed', 'completed'].includes(b.status) && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(b.id)} title="Delete batch">
+                            <Trash2 size={13} className="text-red-500" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
