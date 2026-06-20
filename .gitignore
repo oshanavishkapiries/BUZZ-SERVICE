@@ -36,3 +36,12 @@ temp/
 
 # Documentation build
 docs/site/dist/
+
+# Graphify
+graphify-out/
+
+# MCP config (contains credentials)
+.mcp.json
+
+# test file node_modules
+node_modules
