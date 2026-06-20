@@ -74,7 +74,7 @@ func (s *PostgresStore) GetDatasourceByID(ctx context.Context, appID uuid.UUID, 
 // ListDatasources lists all active datasources for an application
 func (s *PostgresStore) ListDatasources(ctx context.Context, appID uuid.UUID) ([]domain.Datasource, error) {
 	query := `
-		SELECT id, application_id, name, base_url, auth_type, endpoints, active, created_at, updated_at
+		SELECT id, application_id, name, base_url, auth_type, auth_config, endpoints, active, created_at, updated_at
 		FROM datasources
 		WHERE active = true AND application_id = $1
 		ORDER BY name
@@ -91,7 +91,7 @@ func (s *PostgresStore) ListDatasources(ctx context.Context, appID uuid.UUID) ([
 		var ds domain.Datasource
 		err := rows.Scan(
 			&ds.ID, &ds.ApplicationID, &ds.Name, &ds.BaseURL, &ds.AuthType,
-			&ds.Endpoints, &ds.Active, &ds.CreatedAt, &ds.UpdatedAt,
+			&ds.AuthConfig, &ds.Endpoints, &ds.Active, &ds.CreatedAt, &ds.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err

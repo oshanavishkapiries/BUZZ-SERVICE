@@ -262,7 +262,7 @@ func (c *Client) addAuth(req *http.Request, ds *domain.Datasource) error {
 		}
 		req.Header.Set(headerName, apiKey)
 
-	case "":
+	case "none", "":
 		// No auth required
 
 	default:

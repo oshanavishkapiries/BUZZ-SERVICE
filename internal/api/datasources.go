@@ -45,6 +45,16 @@ func (h *DatasourceHandler) CreateDatasource(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "name and base_url are required"})
 	}
 
+	if req.AuthType == "" {
+		req.AuthType = "none"
+	}
+	if req.AuthConfig == nil {
+		req.AuthConfig = map[string]interface{}{}
+	}
+	if req.Endpoints == nil {
+		req.Endpoints = map[string]interface{}{}
+	}
+
 	now := time.Now()
 	ds := &domain.Datasource{
 		ID:            uuid.New(),
