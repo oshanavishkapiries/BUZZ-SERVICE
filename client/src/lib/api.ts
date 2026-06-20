@@ -202,6 +202,10 @@ class APIClient {
     return this.request<{ message: string }>(`/api/v1/batches/${id}/cancel`, { method: 'POST' });
   }
 
+  async retryBatch(id: string): Promise<{ message: string; batch_id: string }> {
+    return this.request<{ message: string; batch_id: string }>(`/api/v1/batches/${id}/retry`, { method: 'POST' });
+  }
+
   async deleteBatch(id: string): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/api/v1/batches/${id}`, { method: 'DELETE' });
   }

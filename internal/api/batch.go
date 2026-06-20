@@ -123,8 +123,11 @@ func (h *BatchHandler) SendBulk(c *fiber.Ctx) error {
 
 	// Enqueue batch processing task
 	if err := h.producer.EnqueueBatchProcess(ctx, appID.String(), batch.ID.String()); err != nil {
-		// Log error but don't fail the request - batch is created
-		// Could implement a retry mechanism here
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "batch saved but failed to enqueue for processing",
+			"details": err.Error(),
+			"batch_id": batch.ID,
+		})
 	}
 
 	return c.Status(http.StatusAccepted).JSON(fiber.Map{
@@ -173,6 +176,58 @@ func (h *BatchHandler) GetBatchStatus(c *fiber.Ctx) error {
 	}
 
 	return c.Status(http.StatusOK).JSON(batch)
+}
+
+// RetryBatch godoc
+// @Summary      Retry a stuck or failed batch
+// @Description  Re-enqueue a batch that is stuck in pending or failed state
+// @Tags         batches
+// @Produce      json
+// @Param        id   path      string  true  "Batch UUID"
+// @Success      202  {object}  map[string]interface{}
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /api/v1/batches/{id}/retry [post]
+func (h *BatchHandler) RetryBatch(c *fiber.Ctx) error {
+	ctx := c.Context()
+	appID, err := GetApplicationID(c)
+	if err != nil {
+		return err
+	}
+
+	batchID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "invalid batch ID"})
+	}
+
+	batch, err := h.store.GetBatch(ctx, appID, batchID)
+	if err != nil {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "batch not found"})
+	}
+
+	if batch.Status != "pending" && batch.Status != "failed" {
+		return c.Status(http.StatusConflict).JSON(fiber.Map{
+			"error": "only pending or failed batches can be retried",
+		})
+	}
+
+	// Reset to pending so the processor starts fresh
+	if err := h.store.UpdateBatchStatus(ctx, appID, batchID, "pending"); err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to reset batch status"})
+	}
+
+	if err := h.producer.EnqueueBatchProcess(ctx, appID.String(), batchID.String()); err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "failed to re-enqueue batch",
+			"details": err.Error(),
+		})
+	}
+
+	return c.Status(http.StatusAccepted).JSON(fiber.Map{
+		"message":  "batch re-queued for processing",
+		"batch_id": batchID,
+	})
 }
 
 // CancelBatch godoc

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Layers, Send, RefreshCcw, XCircle, Trash2 } from 'lucide-react';
+import { Layers, Send, RefreshCcw, XCircle, Trash2, RotateCcw } from 'lucide-react';
 
 const STATUS_VARIANT: Record<string, 'success' | 'info' | 'warning' | 'destructive' | 'secondary'> = {
   completed:  'success',
@@ -19,6 +19,17 @@ const STATUS_VARIANT: Record<string, 'success' | 'info' | 'warning' | 'destructi
   fetching:   'info',
   failed:     'destructive',
   pending:    'secondary',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending:    'Pending',
+  fetching:   'Fetching recipients…',
+  queued:     'Queued for delivery',
+  delivering: 'Delivering…',
+  processing: 'Processing…',
+  completed:  'Completed',
+  failed:     'Failed',
+  cancelled:  'Cancelled',
 };
 
 const IN_PROGRESS = new Set(['pending', 'fetching', 'queued', 'delivering', 'processing']);
@@ -103,6 +114,16 @@ export default function BatchesPage() {
     setEndpoint('');
     const ds = datasources.find(d => d.name === name);
     setEndpointOptions(ds?.endpoints ? Object.keys(ds.endpoints) : []);
+  };
+
+  const handleRetry = async (id: string) => {
+    setActionError(null);
+    try {
+      await api.retryBatch(id);
+      await load();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to retry');
+    }
   };
 
   const handleCancel = async (id: string) => {
@@ -314,15 +335,34 @@ export default function BatchesPage() {
                     <td>
                       <span className="text-xs font-mono">{b.template_name}</span>
                     </td>
-                    <td><Badge variant={STATUS_VARIANT[b.status] ?? 'secondary'}>{b.status}</Badge></td>
-                    <td className="min-w-[120px]">
+                    <td>
+                      <Badge variant={STATUS_VARIANT[b.status] ?? 'secondary'}>
+                        {STATUS_LABEL[b.status] ?? b.status}
+                      </Badge>
+                      {b.error_message && (
+                        <div className="text-xs text-red-500 mt-1 max-w-[180px] truncate" title={b.error_message}>
+                          {b.error_message}
+                        </div>
+                      )}
+                    </td>
+                    <td className="min-w-[140px]">
                       <ProgressBar value={b.sent_count} max={b.total_count} />
+                      {b.total_count > 0 && (
+                        <div className="text-xs text-[var(--text-muted)] mt-0.5">
+                          {b.total_count} recipients extracted
+                        </div>
+                      )}
                     </td>
                     <td className="text-right text-xs font-mono text-green-600 dark:text-green-400">{b.sent_count}</td>
                     <td className="text-right text-xs font-mono text-red-500">{b.failed_count}</td>
                     <td className="text-right text-xs font-mono text-[var(--text-muted)]">{b.total_count}</td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {(b.status === 'pending' || b.status === 'failed') && (
+                          <Button variant="ghost" size="sm" onClick={() => handleRetry(b.id)} title="Retry batch">
+                            <RotateCcw size={13} className="text-blue-500" />
+                          </Button>
+                        )}
                         {IN_PROGRESS.has(b.status) && (
                           <Button variant="ghost" size="sm" onClick={() => handleCancel(b.id)} title="Cancel batch">
                             <XCircle size={13} className="text-yellow-500" />

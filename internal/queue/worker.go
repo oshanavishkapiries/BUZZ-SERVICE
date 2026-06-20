@@ -7,9 +7,12 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
+	"github.com/elight/buzz-service/internal/batch"
+	"github.com/elight/buzz-service/internal/datasource"
 	"github.com/elight/buzz-service/internal/domain"
 	"github.com/elight/buzz-service/internal/provider"
 	"github.com/elight/buzz-service/internal/store"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
 
@@ -177,20 +180,54 @@ func (w *Worker) HandleNotification(ctx context.Context, task *asynq.Task) error
 // HandleBatchProcess processes a batch of notifications
 func (w *Worker) HandleBatchProcess(ctx context.Context, task *asynq.Task) error {
 	var payload struct {
+		AppID   string `json:"application_id"`
 		BatchID string `json:"batch_id"`
 	}
-
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
+		return fmt.Errorf("failed to unmarshal batch payload: %w", err)
+	}
+
+	appID, err := uuid.Parse(payload.AppID)
+	if err != nil {
+		return fmt.Errorf("invalid application_id %q: %w", payload.AppID, err)
+	}
+	batchID, err := uuid.Parse(payload.BatchID)
+	if err != nil {
+		return fmt.Errorf("invalid batch_id %q: %w", payload.BatchID, err)
+	}
+
+	w.logger.Info().
+		Str("app_id", payload.AppID).
+		Str("batch_id", payload.BatchID).
+		Msg("Processing batch")
+
+	// Fetch the batch to know the delivery channel, then resolve a provider for it.
+	b, err := w.store.GetBatch(ctx, appID, batchID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch batch %s: %w", batchID, err)
+	}
+
+	prov, err := w.registry.Resolve(appID, b.Channel, "")
+	if err != nil {
+		return fmt.Errorf("no provider for channel %s: %w", b.Channel, err)
+	}
+
+	templateRepo := store.NewTemplateRepository(w.store.DB())
+	dsClient := datasource.NewClient()
+
+	processor := batch.NewProcessor(w.store, dsClient, templateRepo, prov)
+
+	if err := processor.ProcessBatch(ctx, appID, batchID); err != nil {
+		w.logger.Error().Err(err).
+			Str("batch_id", batchID.String()).
+			Msg("Batch processing failed")
 		return err
 	}
 
 	w.logger.Info().
-		Str("batch_id", payload.BatchID).
-		Msg("Processing batch")
+		Str("batch_id", batchID.String()).
+		Msg("Batch processing completed")
 
-	// This is a placeholder. The actual batch processing is done by the batch processor
-	// which is invoked separately. The queue worker here would trigger batch processing
-	// if needed, but for Phase 9 the batch processor is responsible.
 	return nil
 }
 
